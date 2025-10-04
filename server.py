@@ -239,4 +239,54 @@ def predict_default_sme(sample_dict):
 
 
 
+def calculate_sustainability_score(company_metrics, sector_averages, weights=None, tolerance=0.2, max_penalty=1.0):
+    """
+    Calculate a Sustainability Score for a company based on Energy Efficiency, Carbon Intensity, and Water Usage.
+
+    Parameters:
+    ----->   - company_metrics: dict with keys 'energy_efficiency', 'carbon_intensity', 'water_usage'  <-------
+    - sector_averages: dict with same keys representing sector average metrics
+    - weights: dict with keys 'energy_efficiency', 'carbon_intensity', 'water_usage' (default equal weights)
+    - tolerance: float, acceptable deviation from sector average before penalty (default 20%)
+    - max_penalty: maximum penalty points applied for extreme deviation (default 0.5)
+
+    Returns:
+    - sustainability_score: float, final score between 0 and 10
+    """
+
+    if weights is None:
+        weights = {'energy_efficiency': 0.4, 'carbon_intensity': 0.3, 'water_usage': 0.3}
+
+    normalized = {}
+    for key in company_metrics:
+        normalized[key] = company_metrics[key] / sector_averages[key]
+
+    prelim_score = sum(weights[key] * normalized[key] for key in normalized) * 10 / sum(weights.values())
+
+    penalty = 0
+    for key in normalized:
+        deviation = abs(normalized[key] - 1)  
+        if deviation > tolerance:
+            penalty += min(max_penalty, (deviation - tolerance) * max_penalty / (1 - tolerance))
+
+    sustainability_score = max(0, prelim_score - penalty)  
+
+    return [round(sustainability_score, 2),round(penalty,2)]
+
+
+company_metrics = {
+    'energy_efficiency': 0.2,  # revenue per MWh
+    'carbon_intensity': 1.3,   # tCO2e per revenue unit
+    'water_usage': 3000         # m³ per revenue unit
+}
+
+sector_averages = {
+    'energy_efficiency': 4.5,
+    'carbon_intensity': 1.0,
+    'water_usage': 3500
+}
+
+score = calculate_sustainability_score(company_metrics, sector_averages)
+print("Sustainability Score:", score)
+
 
