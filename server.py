@@ -1,18 +1,17 @@
-from flask import Flask,request
-from flask_cors import CORS
 import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
 import joblib
-from sklearn.preprocessing import StandardScaler
+
 
 device = ('cuda' if torch.cuda.is_available() else 'cpu')
-
-class Model(nn.Module):
-    def __init__(self, input_size, hidden_sizes, output_size, dropout=0.2):
-        super(Model, self).__init__()
-
+device = torch.device('cpu')
+class NeuralNet(nn.Module):
+    """Generic PyTorch Neural Network Model for Classification or Regression."""
+    def __init__(self, input_size, hidden_sizes, output_size, dropout=0.2, is_classification=False):
+        super(NeuralNet, self).__init__()
+        self.is_classification = is_classification
         layers = []
         prev_size = input_size
         for size in hidden_sizes:
@@ -23,210 +22,221 @@ class Model(nn.Module):
                 nn.Dropout(dropout)
             ])
             prev_size = size
-
+        
+        # Output layer
         layers.append(nn.Linear(prev_size, output_size))
-
         self.network = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.network(x)
+    
 
-hidden_sizes = [256,128, 64]
-inp_size = 33 # X_train.shape[1]
-out_size = 1
-model = Model(inp_size, hidden_sizes, out_size)
-model.load_state_dict(torch.load("complete_credit_score_model.pth"))
-model.to(device)
+scaler = joblib.load('scaler.pkl')
 
-def predict_loan_int_rate(model, scaler, derived_feature_info, feature_names_order, numerical_cols_to_scale_fit, device,
-                            person_age, person_income, person_home_ownership, person_emp_length, loan_amnt,
-                            cb_person_default_on_file, cb_person_cred_hist_length, loan_status, loan_grade):
+numerical_cols_to_scale_fit = ['annual_revenue',
+                            'office_ownership_status',
+                            'management_team_experience',
+                            'loan_amount',
+                            'loan_percent_revenue',
+                            'default_history',
+                            'credit_history_length',
+                            'years_in_operation_sqrt',
+                            'debt_to_revenue_ratio',
+                            'loan_to_operating_years_ratio_sqrt',
+                            'loan_to_credit_hist_ratio',
+                            'management_turnover_fraction_sqrt',
+                            'log_revenue',
+                            'log_loan_amount',
+                            'op_years_sqrt_x_team_exp']
+
+def predict_company_metrics(model, scaler, derived_feature_info, feature_names_order, numerical_cols_to_scale_fit, device, metric_type,
+                          years_in_operation, annual_revenue, office_ownership_status, management_team_experience, loan_amount,
+                          default_history, credit_history_length, repayment_status):
 
     feature_values = {
-        'person_age': person_age,
-        'person_income': person_income,
-        'person_home_ownership': person_home_ownership,
-        'person_emp_length': person_emp_length,
-        'loan_amnt': loan_amnt,
-        'cb_person_default_on_file': cb_person_default_on_file,
-        'cb_person_cred_hist_length': cb_person_cred_hist_length,
-        'loan_status': loan_status,
-        'loan_grade': loan_grade
+        'years_in_operation': years_in_operation, 
+        'annual_revenue': annual_revenue,
+        'office_ownership_status': office_ownership_status,
+        'management_team_experience': management_team_experience,
+        'loan_amount': loan_amount,
+        'default_history': default_history,
+        'credit_history_length': credit_history_length,
+        'repayment_status': repayment_status
     }
     user_df = pd.DataFrame([feature_values])
 
-    required_for_derived = ['person_income', 'person_age', 'cb_person_cred_hist_length', 'person_emp_length', 'loan_amnt']
-    for col in required_for_derived:
-        if col not in user_df.columns:
-            user_df[col] = 0
+    user_df['years_in_operation_sqrt'] = np.sqrt(user_df['years_in_operation'])
+    years_in_op_sqrt = user_df['years_in_operation_sqrt'].iloc[0] 
 
-    user_df['loan_percent_income'] = user_df.apply(
-        lambda row: row['loan_amnt'] / row['person_income'] if row['person_income'] > 0 else (
-            derived_feature_info.get('loan_percent_income_default', 0)
-        ),
-        axis=1
-    )
+    user_df['debt_to_revenue_ratio'] = user_df.apply(lambda row: row['loan_amount'] / row['annual_revenue'] if row['annual_revenue'] > 0 else 0, axis=1)
+    user_df['loan_to_operating_years_ratio_sqrt'] = user_df.apply(lambda row: row['loan_amount'] / row['years_in_operation_sqrt'] if row['years_in_operation_sqrt'] > 0 else 0, axis=1)
+    user_df['loan_to_credit_hist_ratio'] = user_df.apply(lambda row: row['loan_amount'] / row['credit_history_length'] if row['credit_history_length'] > 0 else 0, axis=1)
+    user_df['management_turnover_fraction_sqrt'] = user_df.apply(lambda row: row['management_team_experience'] / years_in_op_sqrt if (pd.notna(row['management_team_experience']) and years_in_op_sqrt > 0) else 0, axis=1)
+    user_df['log_revenue'] = np.log1p(user_df['annual_revenue'])
+    user_df['log_loan_amount'] = np.log1p(user_df['loan_amount'])
+    
+    emp_length_imputed_user = user_df['management_team_experience'].fillna(derived_feature_info.get('management_team_experience_median', 0))
+    user_df['op_years_sqrt_x_team_exp'] = user_df['years_in_operation_sqrt'] * emp_length_imputed_user
 
-    user_df['loan_to_income_ratio'] = user_df.apply(
-        lambda row: row['loan_amnt'] / row['person_income'] if row['person_income'] > 0 else (
-            derived_feature_info.get('loan_to_income_ratio_default', 0)
-        ),
-        axis=1
-    )
+    company_age_bins = [0, 5, 15, 30, 50, np.inf]
+    company_age_labels = ['Startup (0-5)', 'Growth (6-15)', 'Mature (16-30)', 'Established (31-50)', 'Legacy (51+)']
+    user_df['company_size_group'] = pd.cut(user_df['years_in_operation'], bins=company_age_bins, labels=company_age_labels, right=True, include_lowest=True)
+    user_df['revenue_bracket'] = pd.cut(user_df['annual_revenue'], bins=derived_feature_info['income_bins'], labels=[1, 2, 3, 4, 5], include_lowest=True)
 
-    user_df['loan_to_age_ratio'] = user_df.apply(
-        lambda row: row['loan_amnt'] / row['person_age'] if row['person_age'] > 0 else (
-            derived_feature_info.get('loan_to_age_ratio_default', 0)
-        ),
-        axis=1
-    )
+    user_df = pd.get_dummies(user_df, columns=['company_size_group'], prefix='company_size_group')
+    user_df['revenue_bracket'] = user_df['revenue_bracket'].astype('category')
+    user_df = pd.get_dummies(user_df, columns=['revenue_bracket'], prefix='revenue_bracket')
+    
+    user_df.drop('years_in_operation', axis=1, inplace=True) 
 
-    user_df['loan_to_cred_hist_ratio'] = user_df.apply(
-        lambda row: row['loan_amnt'] / row['cb_person_cred_hist_length'] if row['cb_person_cred_hist_length'] > 0 else (
-            derived_feature_info.get('loan_to_cred_hist_ratio_default', 0)
-        ),
-        axis=1
-    )
-
-    user_df['emp_hist_fraction'] = user_df.apply(
-        lambda row: row['person_emp_length'] / row['person_age'] if (
-            pd.notna(row['person_emp_length']) and row['person_age'] > 0
-        ) else (
-             derived_feature_info.get('emp_hist_fraction_default', 0)
-        ),
-        axis=1
-    )
-
-    user_df['log_person_income'] = np.log1p(user_df['person_income'])
-    user_df['log_loan_amnt'] = np.log1p(user_df['loan_amnt'])
-
-    emp_length_imputed_user = user_df['person_emp_length'].fillna(derived_feature_info.get('person_emp_length_median', 0))
-    user_df['age_x_emp_length'] = user_df['person_age'] * emp_length_imputed_user
-
-    age_bins = [0, 25, 35, 45, 55, np.inf]
-    age_labels = ['0-25', '26-35', '36-45', '46-55', '56+']
-    user_df['age_group'] = pd.cut(user_df['person_age'], bins=age_bins, labels=age_labels, right=True, include_lowest=True)
-
-    if 'income_bins' in derived_feature_info:
-          try:
-              user_df['income_bracket'] = pd.cut(user_df['person_income'], bins=derived_feature_info['income_bins'], labels=[1, 2, 3, 4, 5], include_lowest=True)
-          except Exception as e:
-              user_df['income_bracket'] = np.nan
-    else:
-          user_df['income_bracket'] = np.nan
-
-    if 'person_home_ownership' in user_df.columns and user_df['person_home_ownership'].dtype == object and 'ownership_mapping' in derived_feature_info:
-          user_df['person_home_ownership'] = user_df['person_home_ownership'].map(derived_feature_info['ownership_mapping'])
-
-    if 'cb_person_default_on_file' in user_df.columns and user_df['cb_person_default_on_file'].dtype == object:
-        user_df['cb_person_default_on_file'] = user_df['cb_person_default_on_file'].map({'Y': 1, 'N': 0})
-
-    for grade in range(7): # Grades 0 through 6
-        col_name = f'loan_grade_{grade}'
-        user_df[col_name] = 0
-
-    if 'loan_grade' in user_df.columns and not user_df.empty:
-        grade_value = int(user_df['loan_grade'].iloc[0])
-        if 0 <= grade_value <= 6:
-            user_df[f'loan_grade_{grade_value}'] = 1
-        user_df.drop('loan_grade', axis=1, inplace=True)
-
-    user_df = pd.get_dummies(user_df, columns=['age_group'], prefix='age_group')
-
-    if 'income_bracket' in user_df.columns:
-         user_df['income_bracket'] = user_df['income_bracket'].astype('category')
-         user_df = pd.get_dummies(user_df, columns=['income_bracket'], prefix='income_bracket')
-
+    bool_cols_user = user_df.select_dtypes(include=[bool]).columns
+    user_df[bool_cols_user] = user_df[bool_cols_user].astype(int)
+    
     user_df = user_df.reindex(columns=feature_names_order, fill_value=0)
-
-    for feature in feature_names_order:
-        user_df[feature] = user_df[feature].astype(np.float32)
-
+    
+    user_df = user_df.astype(np.float32) 
+    
     user_df.fillna(0, inplace=True)
 
-
     cols_to_scale_for_prediction = [col for col in numerical_cols_to_scale_fit if col in user_df.columns]
-
     user_df[cols_to_scale_for_prediction] = scaler.transform(user_df[cols_to_scale_for_prediction])
-
+    
     user_input_tensor = torch.tensor(user_df.values, dtype=torch.float32).to(device)
 
     model.eval()
     with torch.no_grad():
-        prediction = model(user_input_tensor)
+        output = model(user_input_tensor)
+
+        if metric_type == 'rate':
+            prediction = torch.expm1(output)
+        elif metric_type == 'default':
+            prediction = torch.sigmoid(output)
+        else:
+            raise ValueError("Invalid metric_type specified. Use 'rate' or 'default'.")
 
     return prediction.item()
 
-ownership_mapping = {
-    "RENT": 0,
-    "MORTGAGE": 1,
-    "OWN":2
-}
+model_reg_loaded = NeuralNet(input_size=25, hidden_sizes=[256, 128, 64], output_size=1).to(device)
 
-income_bins = [-1.0042542439643916, -0.4932516827369155, -0.2689712169141602, -0.04312089996286911, 0.32531354857104783, 95.04500459992109] # df['person_income'].quantile([0, 0.2, 0.4, 0.6, 0.8, 1]).tolist()
+model_reg_loaded.load_state_dict(torch.load("interest_rate_prediction_model_best.pth"))
 
-# Define derived info
-derived_info = {
-     'ownership_mapping': ownership_mapping,
-     'person_emp_length_median': 4.0, # dataset['person_emp_length'].median()
+# Test variables
+years_in_op=4
+annual_rev=150000
+office_own=0 #  {'RENT': 0, 'MORTGAGE': 1, 'OWN': 2, 'OTHER': 3, 'ANY': 4}
+team_exp=10
+loan_amt=25000
+default_hist=0
+cred_hist_len=3
+repay_status=0
+income_bins = [4000.0, 35000.0, 49000.0, 63000.0, 86000.0, 6000000.0]
+derived_feature_info = {
+     'management_team_experience_median': 4.0,
      'income_bins': income_bins,
 }
+feature_names_order_reg = ['annual_revenue',
+                        'office_ownership_status',
+                        'management_team_experience',
+                        'loan_amount',
+                        'loan_percent_revenue',
+                        'default_history',
+                        'credit_history_length',
+                        'years_in_operation_sqrt',
+                        'debt_to_revenue_ratio',
+                        'loan_to_operating_years_ratio_sqrt',
+                        'loan_to_credit_hist_ratio',
+                        'management_turnover_fraction_sqrt',
+                        'log_revenue',
+                        'log_loan_amount',
+                        'op_years_sqrt_x_team_exp',
+                        'company_size_group_Startup (0-5)',
+                        'company_size_group_Growth (6-15)',
+                        'company_size_group_Mature (16-30)',
+                        'company_size_group_Established (31-50)',
+                        'company_size_group_Legacy (51+)',
+                        'revenue_bracket_1',
+                        'revenue_bracket_2',
+                        'revenue_bracket_3',
+                        'revenue_bracket_4',
+                        'revenue_bracket_5']
 
-scaler = joblib.load('standard_scaler_joblib.pkl')
-grade_mapping = {'A': 6, 'B': 5, 'C': 4, 'D': 3, 'E': 2, 'F': 1, 'G': 0}
-
-numerical_cols_to_scale_fit = ['person_age', 'person_income', 'person_home_ownership', 'person_emp_length', 'loan_amnt', 'loan_percent_income', 'cb_person_cred_hist_length', 'loan_to_income_ratio', 'loan_to_age_ratio', 'loan_to_cred_hist_ratio', 'emp_hist_fraction', 'log_person_income', 'log_loan_amnt', 'age_x_emp_length']
-
-feature_names_order = ['person_age',
- 'person_income',
- 'person_home_ownership',
- 'person_emp_length',
- 'loan_amnt',
- 'loan_status',
- 'loan_percent_income',
- 'cb_person_default_on_file',
- 'cb_person_cred_hist_length',
- 'loan_to_income_ratio',
- 'loan_to_age_ratio',
- 'loan_to_cred_hist_ratio',
- 'emp_hist_fraction',
- 'log_person_income',
- 'log_loan_amnt',
- 'age_x_emp_length',
- 'age_group_0-25',
- 'age_group_26-35',
- 'age_group_36-45',
- 'age_group_46-55',
- 'age_group_56+',
- 'loan_grade_0',
- 'loan_grade_1',
- 'loan_grade_2',
- 'loan_grade_3',
- 'loan_grade_4',
- 'loan_grade_5',
- 'loan_grade_6',
- 'income_bracket_1',
- 'income_bracket_2',
- 'income_bracket_3',
- 'income_bracket_4',
- 'income_bracket_5']
-
-predicted_rate_from_args = predict_loan_int_rate(
-    model,
-    scaler,
-    derived_info,
-    feature_names_order,
-    numerical_cols_to_scale_fit, # This is the corrected list of feature columns
-    device,
-    person_age=50,
-    person_income=1500,
-    person_home_ownership=ownership_mapping['MORTGAGE'], # Using the mapped value (1)
-    person_emp_length=2,
-    loan_amnt=1000,
-    cb_person_default_on_file=0,
-    cb_person_cred_hist_length=2,
-    loan_status=1,
-    loan_grade=grade_mapping['A'] # Using the mapped value (3)
+predicted_rate_no_grade = predict_company_metrics(
+    model_reg_loaded, scaler, derived_feature_info, feature_names_order_reg, # Use REG features
+    numerical_cols_to_scale_fit, device, 'rate', 
+    years_in_op, annual_rev, office_own, team_exp, loan_amt, default_hist, cred_hist_len, repay_status
 )
 
-print(f"\nPredicted loan interest rate using provided values: {predicted_rate_from_args:.3f}")
+# INT_RATE PREDICTION
+
+print(f"\n--- Prediction Results for a 4-year-old Startup with $150k Revenue ---")
+# print(f"Predicted Default Probability (Model 1): {predicted_default_prob * 100:.2f}%")
+print(f"Predicted Interest Rate (Model 2, No Credit Grade): {predicted_rate_no_grade:.3f}%")
+
+
+
+# DEFAULTING PREDICTION
+# New model will be implemented
+class ResidualMLP(nn.Module):
+    def __init__(self, input_dim):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim, 256)
+        self.bn1 = nn.BatchNorm1d(256)
+        self.fc2 = nn.Linear(256, 128)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.fc3 = nn.Linear(128, 64)
+        self.bn3 = nn.BatchNorm1d(64)
+        self.out = nn.Linear(64, 1)
+        self.relu = nn.ReLU()
+        self.dropout1 = nn.Dropout(0.3)
+        self.dropout2 = nn.Dropout(0.2)
+
+    def forward(self, x):
+        x = self.relu(self.bn1(self.fc1(x)))
+        x = self.dropout1(x)
+        x = self.relu(self.bn2(self.fc2(x)))
+        x = self.dropout2(x)
+        x = self.relu(self.bn3(self.fc3(x)))
+        out = torch.sigmoid(self.out(x))
+        return out
+
+model = ResidualMLP(48)
+state_dict = torch.load('residual_mlp_sme.pth')
+model.load_state_dict(state_dict)
+
+preprocessor = joblib.load('preprocessor_sme_advanced.joblib')
+
+# Prediction algorithm for the default prediction
+def predict_default_sme(sample_dict):
+    df = pd.DataFrame([sample_dict])
+    massive_features = ["Annual Income", "Maximum Open Credit", "Current Loan Amount",
+                        "Current Credit Balance", "Monthly Debt"]
+    for col in massive_features:
+        if col in df.columns:
+            df[col] = np.log1p(df[col])
+
+    df["Debt_to_Income_Ratio"] = df["Monthly Debt"] / (df["Annual Income"] + 1e-6)
+    df["Credit_Utilization"] = df["Current Credit Balance"] / (df["Maximum Open Credit"] + 1e-6)
+    df["Loan_to_Income_Ratio"] = df["Current Loan Amount"] / (df["Annual Income"] + 1e-6)
+    df["Credit_Problem_Score"] = (
+        df["Number of Credit Problems"] +
+        df["Bankruptcies"] * 2 +
+        (df["Tax Liens"] > 0).astype(int)
+    )
+
+    # Preprocess
+    preprocessor = joblib.load("preprocessor_sme_advanced.joblib")
+    X_input = preprocessor.transform(df)
+    X_input = torch.tensor(X_input, dtype=torch.float32).to(device)
+
+    # Load model
+    model = ResidualMLP(X_input.shape[1]).to(device)
+    model.load_state_dict(torch.load("residual_mlp_sme.pth", map_location=device))
+    model.eval()
+
+    with torch.no_grad():
+        pred = model(X_input).cpu().numpy()[0][0]
+    return float(pred)
+
+
+
+
