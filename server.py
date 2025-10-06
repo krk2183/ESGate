@@ -3,10 +3,119 @@ import numpy as np
 import torch
 import torch.nn as nn
 import joblib
+from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask_cors import CORS
+import sqlite3
+import bcrypt
+import jwt
+import datetime
+import requests
+import re
+import json
 
+# -------------------------- Flask Setup --------------------------
+app = Flask(__name__)
+CORS(app)
+app.config['SECRET_KEY'] = "YOUR_SECRET_KEY_HERE"  # replace with env variable in prod
 
-device = ('cuda' if torch.cuda.is_available() else 'cpu')
-device = torch.device('cpu')
+device = torch.device('cpu')  # force CPU for now
+
+# -------------------------- DB Setup --------------------------
+def init_db():
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    # Users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL
+        )
+    ''')
+    # Predictions table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS predictions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            company_name TEXT,
+            int_rate REAL,
+            default_rate REAL,
+            sus_score REAL,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# -------------------------- JWT Helper --------------------------
+from functools import wraps
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({"message": "Token is missing!"}), 401
+        try:
+            token = token.replace('Bearer ', '')
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            current_user = data['sub']
+            role = data['role']
+        except Exception as e:
+            return jsonify({"message": f"Token invalid: {str(e)}"}), 401
+        return f(current_user, role, *args, **kwargs)
+    return decorated
+
+# -------------------------- Login & Sign-up --------------------------
+@app.route('/sign-up', methods=['POST'])
+def signup_submit():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    role = request.json.get('role', 'user')
+    
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
+    if cursor.fetchone():
+        conn.close()
+        return jsonify({"message": "Username already exists"}), 400
+    cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", (username, hashed_password, role))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Sign-up successful"}), 200
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.json.get('username')
+    password = request.json.get('password')
+    
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT password, role, id FROM users WHERE username = ?", (username,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result and bcrypt.checkpw(password.encode('utf-8'), result[0]):
+        role = result[1]
+        user_id = result[2]
+        payload = {
+            'sub': username,
+            'role': role,
+            'id': user_id,
+            'iat': datetime.datetime.utcnow(),
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=12)
+        }
+        token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+        return jsonify({"token": token, "role": role}), 200
+    return jsonify({"message": "Invalid credentials"}), 401
+
 class NeuralNet(nn.Module):
     """Generic PyTorch Neural Network Model for Classification or Regression."""
     def __init__(self, input_size, hidden_sizes, output_size, dropout=0.2, is_classification=False):
@@ -29,106 +138,40 @@ class NeuralNet(nn.Module):
 
     def forward(self, x):
         return self.network(x)
-    
 
+class ResidualMLP(nn.Module):
+    def __init__(self, input_dim):
+        super().__init__()
+        self.fc1 = nn.Linear(input_dim, 256)
+        self.bn1 = nn.BatchNorm1d(256)
+        self.fc2 = nn.Linear(256, 128)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.fc3 = nn.Linear(128, 64)
+        self.bn3 = nn.BatchNorm1d(64)
+        self.out = nn.Linear(64, 1)
+        self.relu = nn.ReLU()
+        self.dropout1 = nn.Dropout(0.3)
+        self.dropout2 = nn.Dropout(0.2)
+
+    def forward(self, x):
+        x = self.relu(self.bn1(self.fc1(x)))
+        x = self.dropout1(x)
+        x = self.relu(self.bn2(self.fc2(x)))
+        x = self.dropout2(x)
+        x = self.relu(self.bn3(self.fc3(x)))
+        out = torch.sigmoid(self.out(x))
+        return out
+
+# -------------------------- Prediction Models Setup --------------------------
 scaler = joblib.load('scaler.pkl')
+model_reg_loaded = NeuralNet(input_size=25, hidden_sizes=[256,128,64], output_size=1).to(device)
+model_reg_loaded.load_state_dict(torch.load("interest_rate_prediction_model_best.pth", map_location=device))
 
-numerical_cols_to_scale_fit = ['annual_revenue',
-                            'office_ownership_status',
-                            'management_team_experience',
-                            'loan_amount',
-                            'loan_percent_revenue',
-                            'default_history',
-                            'credit_history_length',
-                            'years_in_operation_sqrt',
-                            'debt_to_revenue_ratio',
-                            'loan_to_operating_years_ratio_sqrt',
-                            'loan_to_credit_hist_ratio',
-                            'management_turnover_fraction_sqrt',
-                            'log_revenue',
-                            'log_loan_amount',
-                            'op_years_sqrt_x_team_exp']
+# Residual MLP for default prediction
+model = ResidualMLP(48).to(device)
+model.load_state_dict(torch.load("residual_mlp_sme.pth", map_location=device))
+preprocessor = joblib.load("preprocessor_sme_advanced.joblib")
 
-def predict_company_metrics(model, scaler, derived_feature_info, feature_names_order, numerical_cols_to_scale_fit, device, metric_type,
-                          years_in_operation, annual_revenue, office_ownership_status, management_team_experience, loan_amount,
-                          default_history, credit_history_length, repayment_status):
-
-    feature_values = {
-        'years_in_operation': years_in_operation, 
-        'annual_revenue': annual_revenue,
-        'office_ownership_status': office_ownership_status,
-        'management_team_experience': management_team_experience,
-        'loan_amount': loan_amount,
-        'default_history': default_history,
-        'credit_history_length': credit_history_length,
-        'repayment_status': repayment_status
-    }
-    user_df = pd.DataFrame([feature_values])
-
-    user_df['years_in_operation_sqrt'] = np.sqrt(user_df['years_in_operation'])
-    years_in_op_sqrt = user_df['years_in_operation_sqrt'].iloc[0] 
-
-    user_df['debt_to_revenue_ratio'] = user_df.apply(lambda row: row['loan_amount'] / row['annual_revenue'] if row['annual_revenue'] > 0 else 0, axis=1)
-    user_df['loan_to_operating_years_ratio_sqrt'] = user_df.apply(lambda row: row['loan_amount'] / row['years_in_operation_sqrt'] if row['years_in_operation_sqrt'] > 0 else 0, axis=1)
-    user_df['loan_to_credit_hist_ratio'] = user_df.apply(lambda row: row['loan_amount'] / row['credit_history_length'] if row['credit_history_length'] > 0 else 0, axis=1)
-    user_df['management_turnover_fraction_sqrt'] = user_df.apply(lambda row: row['management_team_experience'] / years_in_op_sqrt if (pd.notna(row['management_team_experience']) and years_in_op_sqrt > 0) else 0, axis=1)
-    user_df['log_revenue'] = np.log1p(user_df['annual_revenue'])
-    user_df['log_loan_amount'] = np.log1p(user_df['loan_amount'])
-    
-    emp_length_imputed_user = user_df['management_team_experience'].fillna(derived_feature_info.get('management_team_experience_median', 0))
-    user_df['op_years_sqrt_x_team_exp'] = user_df['years_in_operation_sqrt'] * emp_length_imputed_user
-
-    company_age_bins = [0, 5, 15, 30, 50, np.inf]
-    company_age_labels = ['Startup (0-5)', 'Growth (6-15)', 'Mature (16-30)', 'Established (31-50)', 'Legacy (51+)']
-    user_df['company_size_group'] = pd.cut(user_df['years_in_operation'], bins=company_age_bins, labels=company_age_labels, right=True, include_lowest=True)
-    user_df['revenue_bracket'] = pd.cut(user_df['annual_revenue'], bins=derived_feature_info['income_bins'], labels=[1, 2, 3, 4, 5], include_lowest=True)
-
-    user_df = pd.get_dummies(user_df, columns=['company_size_group'], prefix='company_size_group')
-    user_df['revenue_bracket'] = user_df['revenue_bracket'].astype('category')
-    user_df = pd.get_dummies(user_df, columns=['revenue_bracket'], prefix='revenue_bracket')
-    
-    user_df.drop('years_in_operation', axis=1, inplace=True) 
-
-    bool_cols_user = user_df.select_dtypes(include=[bool]).columns
-    user_df[bool_cols_user] = user_df[bool_cols_user].astype(int)
-    
-    user_df = user_df.reindex(columns=feature_names_order, fill_value=0)
-    
-    user_df = user_df.astype(np.float32) 
-    
-    user_df.fillna(0, inplace=True)
-
-    cols_to_scale_for_prediction = [col for col in numerical_cols_to_scale_fit if col in user_df.columns]
-    user_df[cols_to_scale_for_prediction] = scaler.transform(user_df[cols_to_scale_for_prediction])
-    
-    user_input_tensor = torch.tensor(user_df.values, dtype=torch.float32).to(device)
-
-    model.eval()
-    with torch.no_grad():
-        output = model(user_input_tensor)
-
-        if metric_type == 'rate':
-            prediction = torch.expm1(output)
-        elif metric_type == 'default':
-            prediction = torch.sigmoid(output)
-        else:
-            raise ValueError("Invalid metric_type specified. Use 'rate' or 'default'.")
-
-    return prediction.item()
-
-model_reg_loaded = NeuralNet(input_size=25, hidden_sizes=[256, 128, 64], output_size=1).to(device)
-
-model_reg_loaded.load_state_dict(torch.load("interest_rate_prediction_model_best.pth"))
-
-# Test variables
-years_in_op=4
-annual_rev=150000
-office_own=0 #  {'RENT': 0, 'MORTGAGE': 1, 'OWN': 2, 'OTHER': 3, 'ANY': 4}
-team_exp=10
-loan_amt=25000
-default_hist=0
-cred_hist_len=3
-repay_status=0
 income_bins = [4000.0, 35000.0, 49000.0, 63000.0, 86000.0, 6000000.0]
 derived_feature_info = {
      'management_team_experience_median': 4.0,
@@ -160,54 +203,154 @@ feature_names_order_reg = ['annual_revenue',
                         'revenue_bracket_4',
                         'revenue_bracket_5']
 
-predicted_rate_no_grade = predict_company_metrics(
-    model_reg_loaded, scaler, derived_feature_info, feature_names_order_reg, # Use REG features
-    numerical_cols_to_scale_fit, device, 'rate', 
-    years_in_op, annual_rev, office_own, team_exp, loan_amt, default_hist, cred_hist_len, repay_status
-)
 
-# INT_RATE PREDICTION
+numerical_cols_to_scale_fit = ['annual_revenue',
+                            'office_ownership_status',
+                            'management_team_experience',
+                            'loan_amount',
+                            'loan_percent_revenue',
+                            'default_history',
+                            'credit_history_length',
+                            'repayment_status',
+                            'years_in_operation_sqrt',
+                            'debt_to_revenue_ratio',
+                            'loan_to_operating_years_ratio_sqrt',
+                            'loan_to_credit_hist_ratio',
+                            'management_turnover_fraction_sqrt',
+                            'log_revenue',
+                            'log_loan_amount',
+                            'op_years_sqrt_x_team_exp'
+                            ]
 
-print(f"\n--- Prediction Results for a 4-year-old Startup with $150k Revenue ---")
-# print(f"Predicted Default Probability (Model 1): {predicted_default_prob * 100:.2f}%")
-print(f"Predicted Interest Rate (Model 2, No Credit Grade): {predicted_rate_no_grade:.3f}%")
+# --- Mistral AI setup ---
+MISTRAL_API_KEY = "APİ_KEY"
+MISTRAL_API_URL = "https://openrouter.ai/api/v1/completions"
+HEADERS = {
+    "Authorization": f"Bearer {MISTRAL_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+# -------------------------- Useless Jargon --------------------------
+# predict_company_metrics, predict_default_sme, calculate_sustainability_score
+def predict_company_metrics(model, scaler, derived_feature_info, feature_names_order, numerical_cols_to_scale_fit, device, metric_type,
+                            years_in_operation, annual_revenue, office_ownership_status, management_team_experience, loan_amount,
+                            default_history, credit_history_length, repayment_status):
+
+    feature_values = {
+        'years_in_operation': years_in_operation,
+        'annual_revenue': annual_revenue,
+        'office_ownership_status': office_ownership_status,
+        'management_team_experience': management_team_experience,
+        'loan_amount': loan_amount,
+        'default_history': default_history,
+        'credit_history_length': credit_history_length,
+        'repayment_status': repayment_status  # Keep this - it's needed for scaling
+    }
+    user_df = pd.DataFrame([feature_values])
+
+    # Derived features
+    user_df['years_in_operation_sqrt'] = np.sqrt(user_df['years_in_operation'])
+    years_in_op_sqrt = user_df['years_in_operation_sqrt'].iloc[0]
+    user_df['debt_to_revenue_ratio'] = np.where(user_df['annual_revenue'] > 0, user_df['loan_amount'] / user_df['annual_revenue'], 0)
+    user_df['loan_to_operating_years_ratio_sqrt'] = np.where(user_df['years_in_operation_sqrt'] > 0, user_df['loan_amount'] / user_df['years_in_operation_sqrt'], 0)
+    user_df['loan_to_credit_hist_ratio'] = np.where(user_df['credit_history_length'] > 0, user_df['loan_amount'] / user_df['credit_history_length'], 0)
+    user_df['management_turnover_fraction_sqrt'] = np.where(years_in_op_sqrt > 0, user_df['management_team_experience'] / years_in_op_sqrt, 0)
+    user_df['log_revenue'] = np.log1p(user_df['annual_revenue'])
+    user_df['log_loan_amount'] = np.log1p(user_df['loan_amount'])
+    emp_length_imputed_user = user_df['management_team_experience'].fillna(derived_feature_info.get('management_team_experience_median', 0))
+    user_df['op_years_sqrt_x_team_exp'] = user_df['years_in_operation_sqrt'] * emp_length_imputed_user
+
+    # Add loan_percent_revenue which is also in the feature list
+    user_df['loan_percent_revenue'] = np.where(user_df['annual_revenue'] > 0, 
+                                                (user_df['loan_amount'] / user_df['annual_revenue']) * 100, 
+                                                0)
+
+    # Categoricals
+    company_age_bins = [0, 5, 15, 30, 50, np.inf]
+    company_age_labels = ['Startup (0-5)', 'Growth (6-15)', 'Mature (16-30)', 'Established (31-50)', 'Legacy (51+)']
+    user_df['company_size_group'] = pd.cut(user_df['years_in_operation'], bins=company_age_bins, labels=company_age_labels, right=True, include_lowest=True)
+    user_df['revenue_bracket'] = pd.cut(user_df['annual_revenue'], bins=derived_feature_info['income_bins'], labels=[1, 2, 3, 4, 5], include_lowest=True)
+    user_df = pd.get_dummies(user_df, columns=['company_size_group'], prefix='company_size_group')
+    user_df['revenue_bracket'] = user_df['revenue_bracket'].astype('category')
+    user_df = pd.get_dummies(user_df, columns=['revenue_bracket'], prefix='revenue_bracket')
+
+    # Drop years_in_operation AFTER creating all derived features
+    user_df.drop('years_in_operation', axis=1, inplace=True)
+    
+    # DON'T reindex yet - we need to keep repayment_status for scaling!
+    # First, ensure all numerical columns exist
+    user_df = ensure_numeric_columns(user_df, numerical_cols_to_scale_fit)
+    
+    # Scale only the numerical columns (this includes repayment_status)
+    user_df[numerical_cols_to_scale_fit] = scaler.transform(user_df[numerical_cols_to_scale_fit])
+    
+    # NOW drop repayment_status since it's not in the final feature set
+    user_df.drop('repayment_status', axis=1, inplace=True, errors='ignore')
+    
+    # Reindex to match expected feature order (without repayment_status)
+    user_df = user_df.reindex(columns=feature_names_order, fill_value=0)
+    user_df = user_df.fillna(0).astype(np.float32)
+    
+    # Convert to tensor for model input
+    user_input_tensor = torch.tensor(user_df.values, dtype=torch.float32).to(device)
+
+    model.eval()
+    with torch.no_grad():
+        output = model(user_input_tensor)
+        if metric_type == 'rate':
+            prediction = torch.expm1(output)
+        elif metric_type == 'default':
+            prediction = torch.sigmoid(output)
+        else:
+            raise ValueError("Invalid metric_type specified. Use 'rate' or 'default'.")
+    return prediction.item()
 
 
+def build_prompt(metrics_dict): # The model uses this prompt to generate standardized answers
+    return f"""
+        You are a financial and ESG advisor AI. A company has the following metrics:
 
-# DEFAULTING PREDICTION
-# New model will be implemented
-class ResidualMLP(nn.Module):
-    def __init__(self, input_dim):
-        super().__init__()
-        self.fc1 = nn.Linear(input_dim, 256)
-        self.bn1 = nn.BatchNorm1d(256)
-        self.fc2 = nn.Linear(256, 128)
-        self.bn2 = nn.BatchNorm1d(128)
-        self.fc3 = nn.Linear(128, 64)
-        self.bn3 = nn.BatchNorm1d(64)
-        self.out = nn.Linear(64, 1)
-        self.relu = nn.ReLU()
-        self.dropout1 = nn.Dropout(0.3)
-        self.dropout2 = nn.Dropout(0.2)
+        Interest Rate: {metrics_dict.get('int_rate', 'N/A')}
+        Default Probability: {metrics_dict.get('default_rate', 'N/A')}
+        Sustainability Score: {metrics_dict.get('sus_score', 'N/A')}
+        Additional Notes: {metrics_dict.get('notes', '')}
 
-    def forward(self, x):
-        x = self.relu(self.bn1(self.fc1(x)))
-        x = self.dropout1(x)
-        x = self.relu(self.bn2(self.fc2(x)))
-        x = self.dropout2(x)
-        x = self.relu(self.bn3(self.fc3(x)))
-        out = torch.sigmoid(self.out(x))
-        return out
+        Task:
+        1. Provide a concise summary (2-3 sentences) of the company's financial and sustainability health.
+        2. Highlight strengths and weaknesses in separate bullet points.
+        3. Suggest 2-3 actionable recommendations to improve financial or sustainability performance.
 
-model = ResidualMLP(48)
-state_dict = torch.load('residual_mlp_sme.pth')
-model.load_state_dict(state_dict)
+        Return the result in strict JSON format:
+        {{
+        "summary": "...",
+        "strengths": ["..."],
+        "weaknesses": ["..."],
+        "recommendations": ["..."]
+        }}
+        """
+def parse_mistral_output(response_json):
+    try:
+        output_text = response_json["choices"][0]["text"]
+        # Remove ```json code blocks if present
+        match = re.search(r"```json\s*(\{.*\})\s*```", output_text, re.DOTALL)
+        if match:
+            output_text = match.group(1)
+        return json.loads(output_text)
+    except Exception as e:
+        return {"error": f"Failed to parse Mistral output: {str(e)}", "raw_text": response_json}
 
-preprocessor = joblib.load('preprocessor_sme_advanced.joblib')
 
-# Prediction algorithm for the default prediction
+def ensure_numeric_columns(df, expected_cols):
+    """Ensure all numeric columns exist in df, fill with 0 if missing."""
+    for col in expected_cols:
+        if col not in df.columns:
+            df[col] = 0.0
+    return df
+
 def predict_default_sme(sample_dict):
     df = pd.DataFrame([sample_dict])
+
+    # --- Feature engineering ---
     massive_features = ["Annual Income", "Maximum Open Credit", "Current Loan Amount",
                         "Current Credit Balance", "Monthly Debt"]
     for col in massive_features:
@@ -223,37 +366,67 @@ def predict_default_sme(sample_dict):
         (df["Tax Liens"] > 0).astype(int)
     )
 
-    # Preprocess
-    preprocessor = joblib.load("preprocessor_sme_advanced.joblib")
-    X_input = preprocessor.transform(df)
-    X_input = torch.tensor(X_input, dtype=torch.float32).to(device)
+    # --- Ensure all columns from training exist ---
+    numeric_cols_fitted = preprocessor.transformers_[0][2]
+    categorical_cols_fitted = preprocessor.transformers_[1][2]
 
-    # Load model
+    for col in numeric_cols_fitted + categorical_cols_fitted:
+        if col not in df.columns:
+            df[col] = 0 if col in numeric_cols_fitted else "Unknown"
+
+    # 🧩 Added fix: Ensure the transformed output always matches model’s 48 expected features
+    expected_feature_order = [
+        'num__Annual Income', 'num__Tax Liens', 'num__Number of Open Accounts',
+        'num__Years of Credit History', 'num__Maximum Open Credit',
+        'num__Number of Credit Problems', 'num__Months since last delinquent',
+        'num__Bankruptcies', 'num__Current Loan Amount',
+        'num__Current Credit Balance', 'num__Monthly Debt', 'num__Credit Score',
+        'num__Debt_to_Income_Ratio', 'num__Credit_Utilization',
+        'num__Loan_to_Income_Ratio', 'num__Credit_Problem_Score',
+        'cat__Home Ownership_Have Mortgage', 'cat__Home Ownership_Home Mortgage',
+        'cat__Home Ownership_Own Home', 'cat__Home Ownership_Rent',
+        'cat__Years in current job_1 year', 'cat__Years in current job_10+ years',
+        'cat__Years in current job_2 years', 'cat__Years in current job_3 years',
+        'cat__Years in current job_4 years', 'cat__Years in current job_5 years',
+        'cat__Years in current job_6 years', 'cat__Years in current job_7 years',
+        'cat__Years in current job_8 years', 'cat__Years in current job_9 years',
+        'cat__Years in current job_< 1 year', 'cat__Purpose_business loan',
+        'cat__Purpose_buy a car', 'cat__Purpose_buy house',
+        'cat__Purpose_debt consolidation', 'cat__Purpose_educational expenses',
+        'cat__Purpose_home improvements', 'cat__Purpose_major purchase',
+        'cat__Purpose_medical bills', 'cat__Purpose_moving', 'cat__Purpose_other',
+        'cat__Purpose_renewable energy', 'cat__Purpose_small business',
+        'cat__Purpose_take a trip', 'cat__Purpose_vacation',
+        'cat__Purpose_wedding', 'cat__Term_Long Term', 'cat__Term_Short Term'
+    ]
+
+    # Transform input
+    X_input = preprocessor.transform(df)
+
+    # 🧩 Ensure correct shape (add missing columns as zeros if needed)
+    X_df = pd.DataFrame(X_input, columns=preprocessor.get_feature_names_out())
+    for col in expected_feature_order:
+        if col not in X_df.columns:
+            X_df[col] = 0
+    X_df = X_df.reindex(columns=expected_feature_order, fill_value=0)
+
+    # Convert to tensor
+    X_input = torch.tensor(X_df.values, dtype=torch.float32).to(device)
+
+    # --- Load model and predict ---
     model = ResidualMLP(X_input.shape[1]).to(device)
     model.load_state_dict(torch.load("residual_mlp_sme.pth", map_location=device))
     model.eval()
 
     with torch.no_grad():
         pred = model(X_input).cpu().numpy()[0][0]
+
     return float(pred)
 
 
 
+
 def calculate_sustainability_score(company_metrics, sector_averages, weights=None, tolerance=0.2, max_penalty=1.0):
-    """
-    Calculate a Sustainability Score for a company based on Energy Efficiency, Carbon Intensity, and Water Usage.
-
-    Parameters:
-    ----->   - company_metrics: dict with keys 'energy_efficiency', 'carbon_intensity', 'water_usage'  <-------
-    - sector_averages: dict with same keys representing sector average metrics
-    - weights: dict with keys 'energy_efficiency', 'carbon_intensity', 'water_usage' (default equal weights)
-    - tolerance: float, acceptable deviation from sector average before penalty (default 20%)
-    - max_penalty: maximum penalty points applied for extreme deviation (default 0.5)
-
-    Returns:
-    - sustainability_score: float, final score between 0 and 10
-    """
-
     if weights is None:
         weights = {'energy_efficiency': 0.4, 'carbon_intensity': 0.3, 'water_usage': 0.3}
 
@@ -273,20 +446,151 @@ def calculate_sustainability_score(company_metrics, sector_averages, weights=Non
 
     return [round(sustainability_score, 2),round(penalty,2)]
 
+def get_mistral_summary(metrics_dict):
+    payload = {
+        "model": "mistralai/mistral-small-3.2-24b-instruct:free",
+        "prompt": build_prompt(metrics_dict),
+        "temperature": 0.7,
+        "max_output_tokens": 500
+    }
+    response = requests.post(MISTRAL_API_URL, headers=HEADERS, json=payload)
+    if response.status_code != 200:
+        return {"error": f"Mistral API error: {response.text}"}
+    result = response.json()
+    return parse_mistral_output(result)
+# -------------------------- Prediction Endpoints --------------------------
+@app.route('/predict_default', methods=['POST'])
+@token_required
+def predict_default(current_user, role):
+    data_def = request.get_json()
+    if not data_def:
+        return jsonify({"error": "No JSON data received"}), 400
+    
+    # --- Get user_id from username ---
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
+    user_row = cursor.fetchone()
+    if user_row is None:
+        conn.close()
+        return jsonify({"error": "User not found"}), 400
+    user_id = user_row[0]
 
-company_metrics = {
-    'energy_efficiency': 0.2,  # revenue per MWh
-    'carbon_intensity': 1.3,   # tCO2e per revenue unit
-    'water_usage': 3000         # m³ per revenue unit
-}
+    # --- Predict default probability ---
+    try:
+        default_rate = predict_default_sme(data_def)
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
-sector_averages = {
-    'energy_efficiency': 4.5,
-    'carbon_intensity': 1.0,
-    'water_usage': 3500
-}
+    # --- Save prediction in DB ---
+    cursor.execute('''
+        INSERT INTO predictions (user_id, company_name, default_rate) 
+        VALUES (?, ?, ?)
+    ''', (user_id, data_def.get('company_name', ''), default_rate))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'default_rate': default_rate}), 200
 
-score = calculate_sustainability_score(company_metrics, sector_averages)
-print("Sustainability Score:", score)
+@app.route('/predict_int_rate', methods=['POST'])
+@token_required
+def predict_int_rate(current_user, role):
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON data received"}), 400
+    
+    # --- Get user_id from username ---
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
+    user_row = cursor.fetchone()
+    if user_row is None:
+        conn.close()
+        return jsonify({"error": "User not found"}), 400
+    user_id = user_row[0]
+
+    # --- Predict interest rate using your existing function ---
+    try:
+        int_rate = predict_company_metrics(
+            model_reg_loaded, scaler, derived_feature_info, feature_names_order_reg, 
+            numerical_cols_to_scale_fit, device, 'rate', 
+            data['operation_years'], data['revenue'], data['office_own'], data['team_exp'], 
+            data['loan_amt'], data['default_hist'], data['cred_hist_len'], data['repayment_status']
+        )
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+
+    # --- Save prediction in DB ---
+    cursor.execute('''
+        INSERT INTO predictions (user_id, company_name, int_rate) 
+        VALUES (?, ?, ?)
+    ''', (user_id, data.get('company_name', ''), int_rate))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'int_rate': int_rate}), 200
 
 
+@app.route('/sustainability_prediction', methods=['POST'])
+@token_required
+def sustainability_prediction(current_user, role):
+    data_sus = request.get_json()
+    dict_sus = {
+        'energy_efficiency': data_sus.get('energy_ef'),
+        'carbon_intensity': data_sus.get('carbon_int'),
+        'water_usage': data_sus.get('water_usg')
+    }
+    sector_averages = {
+        'energy_efficiency': 4.5,
+        'carbon_intensity': 1.0,
+        'water_usage': 3500
+    }
+    sus_score = calculate_sustainability_score(dict_sus, sector_averages)[0]
+    
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO predictions (user_id, company_name, sus_score) 
+        VALUES (?, ?, ?)
+    ''', (data_sus.get('user_id', None), data_sus.get('company_name',''), sus_score))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'sus_score': sus_score}), 200
+
+# -------------------------- Past Predictions --------------------------
+@app.route('/user_predictions/<company>', methods=['GET'])
+@token_required
+def user_predictions(current_user, role, company):
+    conn = sqlite3.connect('database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT int_rate, default_rate, sus_score, notes, created_at
+        FROM predictions
+        JOIN users ON predictions.user_id = users.id
+        WHERE users.username = ? AND company_name = ?
+        ORDER BY created_at ASC
+    ''', (current_user, company))
+    rows = cursor.fetchall()
+    conn.close()
+    return jsonify({"predictions": rows})
+
+# -------------------------- AI Commentary --------------------------
+@app.route('/company_summary', methods=['POST'])
+@token_required
+def company_summary(current_user, role):
+    data = request.get_json()
+    metrics_dict = {
+        "int_rate": data.get("int_rate"),
+        "default_rate": data.get("default_rate"),
+        "sus_score": data.get("sus_score"),
+        "notes": data.get("notes", "")
+    }
+    summary_result = get_mistral_summary(metrics_dict)
+    return jsonify({"mistral_summary": summary_result}), 200
+
+# -------------------------- Run Server --------------------------
+if __name__ == '__main__':
+    app.run(debug=True)
