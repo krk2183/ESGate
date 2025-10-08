@@ -1,3 +1,6 @@
+#
+# tst.py
+#
 import pandas as pd
 import numpy as np
 import torch.nn as nn
@@ -170,59 +173,100 @@ derived_feature_info = {
      'income_bins': income_bins,
 }
 feature_names_order_reg = ['annual_revenue',
-                        'office_ownership_status',
-                        'management_team_experience',
-                        'loan_amount',
-                        'loan_percent_revenue',
-                        'default_history',
-                        'credit_history_length',
-                        'years_in_operation_sqrt',
-                        'debt_to_revenue_ratio',
-                        'loan_to_operating_years_ratio_sqrt',
-                        'loan_to_credit_hist_ratio',
-                        'management_turnover_fraction_sqrt',
-                        'log_revenue',
-                        'log_loan_amount',
-                        'op_years_sqrt_x_team_exp',
-                        'company_size_group_Startup (0-5)',
-                        'company_size_group_Growth (6-15)',
-                        'company_size_group_Mature (16-30)',
-                        'company_size_group_Established (31-50)',
-                        'company_size_group_Legacy (51+)',
-                        'revenue_bracket_1',
-                        'revenue_bracket_2',
-                        'revenue_bracket_3',
-                        'revenue_bracket_4',
-                        'revenue_bracket_5']
+                           'office_ownership_status',
+                           'management_team_experience',
+                           'loan_amount',
+                           'loan_percent_revenue',
+                           'default_history',
+                           'credit_history_length',
+                           'years_in_operation_sqrt',
+                           'debt_to_revenue_ratio',
+                           'loan_to_operating_years_ratio_sqrt',
+                           'loan_to_credit_hist_ratio',
+                           'management_turnover_fraction_sqrt',
+                           'log_revenue',
+                           'log_loan_amount',
+                           'op_years_sqrt_x_team_exp',
+                           'company_size_group_Startup (0-5)',
+                           'company_size_group_Growth (6-15)',
+                           'company_size_group_Mature (16-30)',
+                           'company_size_group_Established (31-50)',
+                           'company_size_group_Legacy (51+)',
+                           'revenue_bracket_1',
+                           'revenue_bracket_2',
+                           'revenue_bracket_3',
+                           'revenue_bracket_4',
+                           'revenue_bracket_5']
 
 
 numerical_cols_to_scale_fit = ['annual_revenue',
-                            'office_ownership_status',
-                            'management_team_experience',
-                            'loan_amount',
-                            'loan_percent_revenue',
-                            'default_history',
-                            'credit_history_length',
-                            'repayment_status',
-                            'years_in_operation_sqrt',
-                            'debt_to_revenue_ratio',
-                            'loan_to_operating_years_ratio_sqrt',
-                            'loan_to_credit_hist_ratio',
-                            'management_turnover_fraction_sqrt',
-                            'log_revenue',
-                            'log_loan_amount',
-                            'op_years_sqrt_x_team_exp'
-                            ]
+                           'office_ownership_status',
+                           'management_team_experience',
+                           'loan_amount',
+                           'loan_percent_revenue',
+                           'default_history',
+                           'credit_history_length',
+                           'repayment_status',
+                           'years_in_operation_sqrt',
+                           'debt_to_revenue_ratio',
+                           'loan_to_operating_years_ratio_sqrt',
+                           'loan_to_credit_hist_ratio',
+                           'management_turnover_fraction_sqrt',
+                           'log_revenue',
+                           'log_loan_amount',
+                           'op_years_sqrt_x_team_exp'
+                           ]
 
 # --- Mistral AI setup ---
-MISTRAL_API_KEY = "sk-or-v1-abcdef"
+MISTRAL_API_KEY = "API-KEY"
 MISTRAL_API_URL = "https://openrouter.ai/api/v1/completions"
 HEADERS = {
     "Authorization": f"Bearer {MISTRAL_API_KEY}",
     "Content-Type": "application/json"
 }
 
-# -------------------------- Useless Jargon --------------------------
+# -------------------------- Helper Functions --------------------------
+
+### =================================================================
+### ===== NEW FUNCTION TO UPDATE OR INSERT PREDICTIONS =====
+### =================================================================
+def save_prediction_metric(user_id, company_name, metric_name, metric_value):
+    """
+    Saves a single prediction metric by updating a recent record or inserting a new one.
+    A record is considered "recent" if it was created within the last 5 minutes.
+    """
+    conn = sqlite3.connect('assets/database.db')
+    cursor = conn.cursor()
+
+    # Whitelist metric names to prevent SQL injection
+    if metric_name not in ['int_rate', 'default_rate', 'sus_score']:
+        conn.close()
+        raise ValueError("Invalid metric_name provided.")
+
+    # 1. Find a recent record for this user and company
+    cursor.execute("""
+        SELECT id FROM predictions
+        WHERE user_id = ? AND company_name = ? AND created_at >= datetime('now', '-5 minutes')
+        ORDER BY created_at DESC
+        LIMIT 1
+    """, (user_id, company_name))
+    recent_record = cursor.fetchone()
+
+    if recent_record:
+        # 2. If found, UPDATE it
+        record_id = recent_record[0]
+        # Use an f-string for the column name (safe due to whitelist) and ? for the value
+        query = f"UPDATE predictions SET {metric_name} = ? WHERE id = ?"
+        cursor.execute(query, (metric_value, record_id))
+    else:
+        # 3. If not found, INSERT a new record
+        query = f"INSERT INTO predictions (user_id, company_name, {metric_name}) VALUES (?, ?, ?)"
+        cursor.execute(query, (user_id, company_name, metric_value))
+
+    conn.commit()
+    conn.close()
+
+
 def is_finite(num):
     try:
         return (num is not None) and np.isfinite(float(num))
@@ -235,12 +279,12 @@ def validate_prediction_value(val,val_name='prediction',min_value=None,max_val=N
     if not is_finite(val):
         return False, f"{val_name} is not finite: {val}"
     v = float(val)
-    if (min_value is not None and v < min_value) or (max_val is not None and v> max_val):
+    if (min_value is not None and v < min_value) or (max_val is not None and v > max_val):
         return False, f"{val_name} out of expected range [{min_value}, {max_val}]: {v}"
     return True, None
 
 # predict_company_metrics, predict_default_sme, calculate_sustainability_score
-def predict_company_metrics(model, scaler, derived_feature_info, feature_names_order, numerical_cols_to_scale_fit, device, metric_type,
+def predict_company_metrics(model_to_use, scaler, derived_feature_info, feature_names_order, numerical_cols_to_scale_fit, device, metric_type,
                             years_in_operation, annual_revenue, office_ownership_status, management_team_experience, loan_amount,
                             default_history, credit_history_length, repayment_status):
 
@@ -270,8 +314,8 @@ def predict_company_metrics(model, scaler, derived_feature_info, feature_names_o
 
     # Add loan_percent_revenue which is also in the feature list
     user_df['loan_percent_revenue'] = np.where(user_df['annual_revenue'] > 0, 
-                                                (user_df['loan_amount'] / user_df['annual_revenue']) * 100, 
-                                                0)
+                                               (user_df['loan_amount'] / user_df['annual_revenue']) * 100, 
+                                               0)
 
     # Categoricals
     company_age_bins = [0, 5, 15, 30, 50, np.inf]
@@ -285,13 +329,14 @@ def predict_company_metrics(model, scaler, derived_feature_info, feature_names_o
     # Drop years_in_operation AFTER creating all derived features
     user_df.drop('years_in_operation', axis=1, inplace=True)
     
-    # DON'T reindex yet - we need to keep repayment_status for scaling!
     # First, ensure all numerical columns exist
-    user_df = ensure_numeric_columns(user_df, numerical_cols_to_scale_fit)
+    for col in numerical_cols_to_scale_fit:
+        if col not in user_df.columns:
+            user_df[col] = 0.0
     
     # Scale only the numerical columns (this includes repayment_status)
     scaled_values = scaler.transform(user_df[numerical_cols_to_scale_fit].values)
-    user_df[numerical_cols_to_scale_fit] = scaled_values    
+    user_df[numerical_cols_to_scale_fit] = scaled_values   
     # NOW drop repayment_status since it's not in the final feature set
     user_df.drop('repayment_status', axis=1, inplace=True, errors='ignore')
     
@@ -302,40 +347,39 @@ def predict_company_metrics(model, scaler, derived_feature_info, feature_names_o
     # Convert to tensor for model input
     user_input_tensor = torch.tensor(user_df.values, dtype=torch.float32).to(device)
 
-    # In predict_company_metrics, before calling model:
-    print(f"DataFrame shape before model: {user_df.shape}")
-    print(f"DataFrame columns: {list(user_df.columns)}")
-    print(f"Sample values:\n{user_df.iloc[0]}")
-
-    model.eval()
+    model_to_use.eval()
     with torch.no_grad():
-        output = model(user_input_tensor)
+        output = model_to_use(user_input_tensor)
         if metric_type == 'rate':
-            prediction = torch.expm1(output)
+            prediction = output/100.0
         elif metric_type == 'default':
             prediction = torch.sigmoid(output)
         else:
             raise ValueError("Invalid metric_type specified. Use 'rate' or 'default'.")
-        
-    # After model prediction:
-    print(f"Raw model output: {output.item()}")
-    print(f"After expm1: {prediction.item()}")
+            
     return prediction.item()
 
 
-def build_prompt(metrics_dict): # The model uses this prompt to generate standardized answers
+def build_prompt(metrics_dict):
+    int_rate_percent = f"{metrics_dict.get('int_rate', 0) * 100:.2f}%" if metrics_dict.get('int_rate') is not None else "N/A"
+    default_rate_percent = f"{metrics_dict.get('default_rate', 0) * 100:.2f}%" if metrics_dict.get('default_rate') is not None else "N/A"
+
     return f"""
         You are a financial and ESG advisor AI. A company has the following metrics:
 
-        Interest Rate: {metrics_dict.get('int_rate', 'N/A')}
-        Default Probability: {metrics_dict.get('default_rate', 'N/A')}
-        Sustainability Score: {metrics_dict.get('sus_score', 'N/A')}
+        Interest Rate: {int_rate_percent}
+        Default Probability: {default_rate_percent}
+        Sustainability Score: {metrics_dict.get('sus_score', 'N/A')} out of 10
         Additional Notes: {metrics_dict.get('notes', '')}
 
         Task:
         1. Provide a concise summary (2-3 sentences) of the company's financial and sustainability health.
-        2. Highlight strengths and weaknesses in separate bullet points.
-        3. Suggest 2-3 actionable recommendations to improve financial or sustainability performance.
+        2. In your summary, you MUST classify the company's risk based on its Default Probability using these exact categories:
+           - Low Risk: Below 40%
+           - Average Risk: 40% to 60%
+           - High Risk: Above 60%
+        3. Highlight strengths and weaknesses in separate bullet points.
+        4. Suggest 2-3 actionable recommendations to improve financial or sustainability performance.
 
         Return the result in strict JSON format:
         {{
@@ -355,14 +399,6 @@ def parse_mistral_output(response_json):
         return json.loads(output_text)
     except Exception as e:
         return {"error": f"Failed to parse Mistral output: {str(e)}", "raw_text": response_json}
-
-
-def ensure_numeric_columns(df, expected_cols):
-    """Ensure all numeric columns exist in df, fill with 0 if missing."""
-    for col in expected_cols:
-        if col not in df.columns:
-            df[col] = 0.0
-    return df
 
 def predict_default_sme(sample_dict):
     df = pd.DataFrame([sample_dict])
@@ -391,7 +427,6 @@ def predict_default_sme(sample_dict):
         if col not in df.columns:
             df[col] = 0 if col in numeric_cols_fitted else "Unknown"
 
-    # 🧩 Added fix: Ensure the transformed output always matches model’s 48 expected features
     expected_feature_order = [
         'num__Annual Income', 'num__Tax Liens', 'num__Number of Open Accounts',
         'num__Years of Credit History', 'num__Maximum Open Credit',
@@ -420,7 +455,7 @@ def predict_default_sme(sample_dict):
     # Transform input
     X_input = preprocessor.transform(df)
 
-    # 🧩 Ensure correct shape (add missing columns as zeros if needed)
+    #  Ensure correct shape
     X_df = pd.DataFrame(X_input, columns=preprocessor.get_feature_names_out())
     for col in expected_feature_order:
         if col not in X_df.columns:
@@ -431,16 +466,14 @@ def predict_default_sme(sample_dict):
     X_input = torch.tensor(X_df.values, dtype=torch.float32).to(device)
 
     # --- Load model and predict ---
-    model = ResidualMLP(X_input.shape[1]).to(device)
-    model.load_state_dict(torch.load("assets/residual_mlp_sme.pth", map_location=device))
-    model.eval()
+    model_def = ResidualMLP(X_input.shape[1]).to(device)
+    model_def.load_state_dict(torch.load("assets/residual_mlp_sme.pth", map_location=device))
+    model_def.eval()
 
     with torch.no_grad():
-        pred = model(X_input).cpu().numpy()[0][0]
+        pred = model_def(X_input).cpu().numpy()[0][0]
 
     return float(pred)
-
-
 
 
 def calculate_sustainability_score(company_metrics, sector_averages, weights=None, tolerance=0.2, max_penalty=1.0):
@@ -475,9 +508,12 @@ def get_mistral_summary(metrics_dict):
         return {"error": f"Mistral API error: {response.text}"}
     result = response.json()
     return parse_mistral_output(result)
+
 # -------------------------- Prediction Endpoints --------------------------
 
-# ---------- Safe predict_default ---------- :-(
+### =================================================================
+### ===== ENDPOINT MODIFIED TO USE NEW HELPER FUNCTION =====
+### =================================================================
 @app.route('/predict_default', methods=['POST'])
 @token_required
 def predict_default(current_user, role):
@@ -493,29 +529,34 @@ def predict_default(current_user, role):
         conn.close()
         return jsonify({"error": "User not found"}), 400
     user_id = user_row[0]
+    conn.close() # Close connection after getting user_id
 
     try:
         default_rate = predict_default_sme(data_def)
     except Exception as e:
         traceback.print_exc()
-        conn.close()
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
     ok, reason = validate_prediction_value(default_rate, "default_rate", 0.0, 1.0)
     if not ok:
-        conn.close()
         return jsonify({"error": f"Invalid model output: {reason}"}), 500
 
-    cursor.execute('''
-        INSERT INTO predictions (user_id, company_name, default_rate)
-        VALUES (?, ?, ?)
-    ''', (user_id, data_def.get('company_name', ''), float(default_rate)))
-    conn.commit()
-    conn.close()
+    # Save using the new UPSERT logic
+    try:
+        save_prediction_metric(
+            user_id,
+            data_def.get('company_name', ''),
+            'default_rate',
+            float(default_rate)
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to save prediction: {str(e)}"}), 500
 
     return jsonify({'default_rate': float(default_rate)}), 200
 
-# ---------- Safe predict_int_rate ----------
+### =================================================================
+### ===== ENDPOINT MODIFIED TO USE NEW HELPER FUNCTION =====
+### =================================================================
 @app.route('/predict_int_rate', methods=['POST'])
 @token_required
 def predict_int_rate(current_user, role):
@@ -531,15 +572,14 @@ def predict_int_rate(current_user, role):
         conn.close()
         return jsonify({"error": "User not found"}), 400
     user_id = user_row[0]
+    conn.close() # Close connection after getting user_id
 
     required = ['operation_years','revenue','office_own','team_exp','loan_amt','default_hist','cred_hist_len','repayment_status']
     for k in required:
         if k not in data:
-            conn.close()
             return jsonify({"error": f"Missing required field: {k}"}), 400
 
     try:
-        # compute
         int_rate = predict_company_metrics(
             model_reg_loaded, scaler, derived_feature_info, feature_names_order_reg,
             numerical_cols_to_scale_fit, device, 'rate',
@@ -548,25 +588,73 @@ def predict_int_rate(current_user, role):
         )
     except Exception as e:
         traceback.print_exc()
-        conn.close()
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
-    # Validate (choose sensible bounds)
     ok, reason = validate_prediction_value(int_rate, "int_rate", -0.5, 5.0)
     if not ok:
-        # Do not insert invalid value into DB
-        conn.close()
         return jsonify({"error": f"Invalid model output: {reason}"}), 500
 
-    # Insert only valid value
-    cursor.execute('''
-        INSERT INTO predictions (user_id, company_name, int_rate)
-        VALUES (?, ?, ?)
-    ''', (user_id, data.get('company_name', ''), float(int_rate)))
-    conn.commit()
-    conn.close()
+    # Save using the new UPSERT logic
+    try:
+        save_prediction_metric(
+            user_id,
+            data.get('company_name', ''),
+            'int_rate',
+            float(int_rate)
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to save prediction: {str(e)}"}), 500
 
     return jsonify({'int_rate': float(int_rate)}), 200
+
+### =================================================================
+@app.route('/sustainability_prediction', methods=['POST'])
+@token_required
+def sustainability_prediction(current_user, role):
+    data_sus = request.get_json()
+    
+    conn = sqlite3.connect('assets/database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
+    user_row = cursor.fetchone()
+    if user_row is None:
+        conn.close()
+        return jsonify({"error": "User not found"}), 400
+    user_id = user_row[0]
+    conn.close() # Close connection after getting user_id
+    
+    dict_sus = {
+        'energy_efficiency': data_sus.get('energy_ef'),
+        'carbon_intensity': data_sus.get('carbon_int'),
+        'water_usage': data_sus.get('water_usg')
+    }
+    sector_averages = {
+        'energy_efficiency': 4.5,
+        'carbon_intensity': 1.0,
+        'water_usage': 3500
+    }
+    
+    try:
+        sus_score = calculate_sustainability_score(dict_sus, sector_averages)[0]
+    except Exception as e:
+        return jsonify({"error": f"Calculation failed: {str(e)}"}), 500
+    
+    ok, reason = validate_prediction_value(sus_score, "sus_score", 0.0, 100.0)
+    if not ok:
+        return jsonify({"error": f"Invalid sus_score: {reason}"}), 500
+    
+    # Save using the new UPSERT logic
+    try:
+        save_prediction_metric(
+            user_id,
+            data_sus.get('company_name', ''),
+            'sus_score',
+            float(sus_score)
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to save prediction: {str(e)}"}), 500
+    
+    return jsonify({'sus_score': float(sus_score)}), 200
 
 
 @app.route('/user_predictions/<company>', methods=['GET'])
@@ -598,54 +686,6 @@ def user_predictions(current_user, role, company):
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
-
-@app.route('/sustainability_prediction', methods=['POST'])
-@token_required
-def sustainability_prediction(current_user, role):
-    data_sus = request.get_json()
-    
-    # Get user_id from database like other endpoints
-    conn = sqlite3.connect('assets/database.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
-    user_row = cursor.fetchone()
-    if user_row is None:
-        conn.close()
-        return jsonify({"error": "User not found"}), 400
-    user_id = user_row[0]
-    
-    dict_sus = {
-        'energy_efficiency': data_sus.get('energy_ef'),
-        'carbon_intensity': data_sus.get('carbon_int'),
-        'water_usage': data_sus.get('water_usg')
-    }
-    sector_averages = {
-        'energy_efficiency': 4.5,
-        'carbon_intensity': 1.0,
-        'water_usage': 3500
-    }
-    
-    try:
-        sus_score = calculate_sustainability_score(dict_sus, sector_averages)[0]
-    except Exception as e:
-        conn.close()
-        return jsonify({"error": f"Calculation failed: {str(e)}"}), 500
-    
-    # Validate
-    ok, reason = validate_prediction_value(sus_score, "sus_score", 0.0, 100.0)
-    if not ok:
-        conn.close()
-        return jsonify({"error": f"Invalid sus_score: {reason}"}), 500
-    
-    cursor.execute('''
-        INSERT INTO predictions (user_id, company_name, sus_score) 
-        VALUES (?, ?, ?)
-    ''', (user_id, data_sus.get('company_name', ''), float(sus_score)))
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'sus_score': float(sus_score)}), 200
 
 
 # -------------------------- AI Commentary --------------------------
