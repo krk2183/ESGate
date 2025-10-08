@@ -90,11 +90,11 @@ def run_all_tests():
     # Interest Rate Prediction
     print_section("3. Interest Rate Prediction")
     int_rate_payload = {
-        "operation_years": 4,
-        "revenue": 150000,
-        "office_own": 2,
-        "team_exp": 10,
-        "loan_amt": 25000,
+        "operation_years": 1,
+        "revenue": 150_000,
+        "office_own": 0,
+        "team_exp": 5,
+        "loan_amt": 300_000,
         "default_hist": 0,
         "cred_hist_len": 3,
         "repayment_status": 0,
