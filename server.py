@@ -218,7 +218,7 @@ numerical_cols_to_scale_fit = ['annual_revenue',
                            ]
 
 # --- Mistral AI setup ---
-MISTRAL_API_KEY = "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"
+MISTRAL_API_KEY = "API-KEY"
 MISTRAL_API_URL = "https://openrouter.ai/api/v1/completions"
 HEADERS = {
     "Authorization": f"Bearer {MISTRAL_API_KEY}",
@@ -607,8 +607,6 @@ def predict_int_rate(current_user, role):
 
     return jsonify({'int_rate': float(int_rate)}), 200
 
-### =================================================================
-### ===== ENDPOINT MODIFIED TO USE NEW HELPER FUNCTION =====
 ### =================================================================
 @app.route('/sustainability_prediction', methods=['POST'])
 @token_required
