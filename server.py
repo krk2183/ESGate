@@ -1,9 +1,3 @@
-"""
-NOTES: THE SCALER IS FULLY FUCKED UP TRAIN IT IN HERE AND THEN SAVE IT
-
-"""
-
-
 import pandas as pd
 import numpy as np
 import torch.nn as nn
