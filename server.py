@@ -221,7 +221,7 @@ numerical_cols_to_scale_fit = ['annual_revenue',
                             ]
 
 # --- Mistral AI setup ---
-MISTRAL_API_KEY = "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"
+MISTRAL_API_KEY = "sk-or-v1-abcdef"
 MISTRAL_API_URL = "https://openrouter.ai/api/v1/completions"
 HEADERS = {
     "Authorization": f"Bearer {MISTRAL_API_KEY}",
