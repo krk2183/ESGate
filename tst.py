@@ -3,9 +3,6 @@ import json
 
 BASE_URL = "http://127.0.0.1:5000"
 
-# ------------------------------
-# Helper to map short test keys to SME model features
-# ------------------------------
 def map_to_sme_features(data):
     return {
         "Home Ownership": "Own",
@@ -23,112 +20,165 @@ def map_to_sme_features(data):
         "Current Loan Amount": data.get("loan_amt", 0),
         "Current Credit Balance": data.get("balance", 0),
         "Monthly Debt": data.get("monthly_debit", 0),
-        "Credit Score": data.get("cred_score", 0)
+        "Credit Score": data.get("cred_score", 0),
+        "company_name": data.get("company_name", "TestCompany")
     }
 
-# ------------------------------
-# 1. Sign Up
-# ------------------------------
-signup_data = {
-    "username": "kenan_test",
-    "password": "StrongPassword123",
-    "role": "user"
-}
+def signup(username, password):
+    payload = {"username": username, "password": password, "role": "user"}
+    r = requests.post(f"{BASE_URL}/sign-up", json=payload)
+    return r.json()
 
-r = requests.post(f"{BASE_URL}/sign-up", json=signup_data)
-print("Sign-up response:", r.json())
+def login(username, password):
+    payload = {"username": username, "password": password}
+    r = requests.post(f"{BASE_URL}/login", json=payload)
+    resp = r.json()
+    if "token" not in resp:
+        raise Exception(f"Login failed: {resp}")
+    return resp["token"]
 
-# ------------------------------
-# 2. Login
-# ------------------------------
-login_data = {
-    "username": "kenan_test",
-    "password": "StrongPassword123"
-}
+def safe_request(method, endpoint, token=None, payload=None):
+    """Wrapper to handle requests safely with better error reporting"""
+    try:
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        
+        if method == "POST":
+            r = requests.post(f"{BASE_URL}/{endpoint}", json=payload, headers=headers)
+        else:  # GET
+            r = requests.get(f"{BASE_URL}/{endpoint}", headers=headers)
+        
+        # Check if response has content
+        if r.status_code == 404:
+            return {"error": "Endpoint not found (404)", "status_code": 404}
+        
+        if r.text.strip() == "":
+            return {"error": "Empty response from server", "status_code": r.status_code}
+        
+        try:
+            return r.json()
+        except json.JSONDecodeError:
+            return {"error": f"Invalid JSON response: {r.text[:200]}", "status_code": r.status_code}
+    
+    except requests.exceptions.ConnectionError:
+        return {"error": "Cannot connect to server. Is it running?"}
+    except Exception as e:
+        return {"error": f"Request failed: {str(e)}"}
 
-r = requests.post(f"{BASE_URL}/login", json=login_data)
-login_resp = r.json()
-print("Login response:", login_resp)
+def print_section(title):
+    print(f"\n{'='*60}")
+    print(f"  {title}")
+    print(f"{'='*60}\n")
 
-if "token" not in login_resp:
-    raise Exception("Login failed, cannot continue tests.")
+def run_all_tests():
+    username = "kenan_test"
+    password = "StrongPassword123" # Random password istg idk
 
-token = login_resp["token"]
-headers = {"Authorization": f"Bearer {token}"}
+    # Signup
+    print_section("1. Sign Up")
+    signup_resp = signup(username, password)
+    print(json.dumps(signup_resp, indent=2))
 
-# ------------------------------
-# 3. Interest Rate Prediction
-# ------------------------------
-int_rate_data = {
-    "operation_years": 4,
-    "revenue": 150000,
-    "office_own": 0,
-    "team_exp": 10,
-    "loan_amt": 25000,
-    "default_hist": 0,
-    "cred_hist_len": 3,
-    "repayment_status": 0,
-    "user_id": 1,
-    "company_name": "TestCompany"
-}
+    # Login
+    print_section("2. Login")
+    try:
+        token = login(username, password)
+        print(f"✓ Login successful! Token obtained.")
+    except Exception as e:
+        print(f"✗ Login failed: {e}")
+        return
 
-r = requests.post(f"{BASE_URL}/predict_int_rate", json=int_rate_data, headers=headers)
-print("Interest Rate Prediction:", r.json())
+    # Interest Rate Prediction
+    print_section("3. Interest Rate Prediction")
+    int_rate_payload = {
+        "operation_years": 4,
+        "revenue": 150000,
+        "office_own": 2,
+        "team_exp": 10,
+        "loan_amt": 25000,
+        "default_hist": 0,
+        "cred_hist_len": 3,
+        "repayment_status": 0,
+        "company_name": "TestCompany"
+    }
+    int_rate_resp = safe_request("POST", "predict_int_rate", token, int_rate_payload)
+    print(json.dumps(int_rate_resp, indent=2))
+    
+    if "error" in int_rate_resp:
+        print("⚠️  Interest rate prediction failed")
 
-# ------------------------------
-# 4. Default Prediction
-# ------------------------------
-default_data_short = {
-    "revenue": 150000,
-    "num_acc": 5,
-    "credit_hist": 3,
-    "max_cred": 50000,
-    "num_prob": 0,
-    "last_delinquent": 12,
-    "loan_amt": 25000,
-    "balance": 2000,
-    "monthly_debit": 1000,
-    "cred_score": 720,
-    "user_id": 1,
-    "company_name": "TestCompany"
-}
+    # Default  Rate Prediction
+    print_section("4. Default Probability Prediction")
+    default_data_short = {
+        "revenue": 150000,
+        "office_own":2,
+        "num_acc": 5,
+        "credit_hist": 3,
+        "max_cred": 50000,
+        "num_prob": 0,
+        "last_delinquent": 12,
+        "loan_amt": 25000,
+        "balance": 2000,
+        "monthly_debit": 1000,
+        "cred_score": 720,
+        "company_name": "TestCompany"
+    }
+    default_payload = map_to_sme_features(default_data_short)
+    default_resp = safe_request("POST", "predict_default", token, default_payload)
+    print(json.dumps(default_resp, indent=2))
 
-# Map short keys to full model features
-default_data = map_to_sme_features(default_data_short)
-r = requests.post(f"{BASE_URL}/predict_default", json=default_data, headers=headers)
-print("Default Prediction:", r.json())
+    # Sustainability Prediction
+    print_section("5. Sustainability Score Prediction")
+    sustainability_payload = {
+        "energy_ef": 4.2,
+        "carbon_int": 1.1,
+        "water_usg": 3400,
+        "company_name": "TestCompany"
+    }
+    sus_resp = safe_request("POST", "sustainability_prediction", token, sustainability_payload)
+    print(json.dumps(sus_resp, indent=2))
 
-# ------------------------------
-# 5. Sustainability Prediction
-# ------------------------------
-sustainability_data = {
-    "energy_ef": 4.2,
-    "carbon_int": 1.1,
-    "water_usg": 3400,
-    "user_id": 1,
-    "company_name": "TestCompany"
-}
+    # Company Summary (Mistral AI)
+    print_section("6. AI-Generated Company Summary")
+    summary_payload = {
+        "int_rate": int_rate_resp.get("int_rate", 0.07),
+        "default_rate": default_resp.get("default_rate", 0.12),
+        "sus_score": sus_resp.get("sus_score", 7.5),
+        "notes": "Company is small but growing fast."
+    }
+    summary_resp = safe_request("POST", "company_summary", token, summary_payload)
+    print(json.dumps(summary_resp, indent=2))
 
-r = requests.post(f"{BASE_URL}/sustainability_prediction", json=sustainability_data, headers=headers)
-print("Sustainability Prediction:", r.json())
+    # Retrieve Past Predictions
+    print_section("7. Past Predictions for TestCompany")
+    past_preds = safe_request("GET", "user_predictions/TestCompany", token)
+    print(json.dumps(past_preds, indent=2))
 
-# ------------------------------
-# 6. AI Company Summary
-# ------------------------------
-summary_data = {
-    "int_rate": 0.072,
-    "default_rate": 0.12,
-    "sus_score": 7.8,
-    "notes": "Company is small but growing fast.",
-    "user_id": 1,
-    "company_name": "TestCompany"
-}
+    #  Test Combined Save Endpoint
+    print_section("8. Save Combined Prediction")
+    combined_payload = {
+        "int_rate": int_rate_resp.get("int_rate"),
+        "default_rate": default_resp.get("default_rate"),
+        "sus_score": sus_resp.get("sus_score"),
+        "company_name": "TestCompany_Combined"
+    }
+    combined_resp = safe_request("POST", "predict_all_and_save", token, combined_payload)
+    print(json.dumps(combined_resp, indent=2))
 
-r = requests.post(f"{BASE_URL}/company_summary", json=summary_data, headers=headers)
-print("Mistral AI Summary:", json.dumps(r.json(), indent=4))
+    # Test Edge Cases
+    print_section("9. Edge Case Tests")
+    
+    # Test with missing required field
+    print("Testing missing required field...")
+    bad_payload = {"operation_years": 4, "revenue": 150000}  # Missing other fields
+    bad_resp = safe_request("POST", "predict_int_rate", token, bad_payload)
+    print(f"Missing field test: {bad_resp.get('error', 'Unexpected success')}\n")
+    
+    # Test with invalid token
+    print("Testing invalid token...")
+    invalid_resp = safe_request("POST", "predict_int_rate", "invalid_token", int_rate_payload)
+    print(f"Invalid token test: {invalid_resp.get('message', 'No error message')}\n")
 
-# ------------------------------
-# 7. Retrieve Past Predictions
-# ------------------------------
-r = requests.get(f"{BASE_URL}/user_predictions/TestCompany", headers=headers)
-print("Past Predictions:", json.dumps(r.json(), indent=4))
+    print_section("✓ All Tests Complete")
+
+if __name__ == "__main__":
+    run_all_tests()

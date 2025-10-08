@@ -1,17 +1,15 @@
+"""
+NOTES: THE SCALER IS FULLY FUCKED UP TRAIN IT IN HERE AND THEN SAVE IT
+
+"""
+
+
 import pandas as pd
 import numpy as np
-import torch
 import torch.nn as nn
-import joblib
 from flask import Flask, request, jsonify, render_template, redirect, url_for
 from flask_cors import CORS
-import sqlite3
-import bcrypt
-import jwt
-import datetime
-import requests
-import re
-import json
+import math, traceback, bcrypt,jwt,datetime,re,requests,json,torch,sqlite3, joblib
 
 # -------------------------- Flask Setup --------------------------
 app = Flask(__name__)
@@ -22,7 +20,7 @@ device = torch.device('cpu')  # force CPU for now
 
 # -------------------------- DB Setup --------------------------
 def init_db():
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('assets/database.db')
     cursor = conn.cursor()
     # Users table
     cursor.execute('''
@@ -80,7 +78,7 @@ def signup_submit():
     
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('assets/database.db')
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE username = ?", (username,))
     if cursor.fetchone():
@@ -96,7 +94,7 @@ def login():
     username = request.json.get('username')
     password = request.json.get('password')
     
-    conn = sqlite3.connect('database.db')
+    conn = sqlite3.connect('assets/database.db')
     cursor = conn.cursor()
     cursor.execute("SELECT password, role, id FROM users WHERE username = ?", (username,))
     result = cursor.fetchone()
@@ -163,14 +161,14 @@ class ResidualMLP(nn.Module):
         return out
 
 # -------------------------- Prediction Models Setup --------------------------
-scaler = joblib.load('scaler.pkl')
+scaler = joblib.load('assets/scaler.pkl')
 model_reg_loaded = NeuralNet(input_size=25, hidden_sizes=[256,128,64], output_size=1).to(device)
-model_reg_loaded.load_state_dict(torch.load("interest_rate_prediction_model_best.pth", map_location=device))
+model_reg_loaded.load_state_dict(torch.load("assets/interest_rate_prediction_model_best.pth", map_location=device))
 
 # Residual MLP for default prediction
 model = ResidualMLP(48).to(device)
-model.load_state_dict(torch.load("residual_mlp_sme.pth", map_location=device))
-preprocessor = joblib.load("preprocessor_sme_advanced.joblib")
+model.load_state_dict(torch.load("assets/residual_mlp_sme.pth", map_location=device))
+preprocessor = joblib.load("assets/preprocessor_sme_advanced.joblib")
 
 income_bins = [4000.0, 35000.0, 49000.0, 63000.0, 86000.0, 6000000.0]
 derived_feature_info = {
@@ -223,7 +221,7 @@ numerical_cols_to_scale_fit = ['annual_revenue',
                             ]
 
 # --- Mistral AI setup ---
-MISTRAL_API_KEY = "APİ_KEY"
+MISTRAL_API_KEY = "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"
 MISTRAL_API_URL = "https://openrouter.ai/api/v1/completions"
 HEADERS = {
     "Authorization": f"Bearer {MISTRAL_API_KEY}",
@@ -231,6 +229,22 @@ HEADERS = {
 }
 
 # -------------------------- Useless Jargon --------------------------
+def is_finite(num):
+    try:
+        return (num is not None) and np.isfinite(float(num))
+    except Exception:
+        return False
+    
+def validate_prediction_value(val,val_name='prediction',min_value=None,max_val=None):
+    if val is None:
+        return False, f"{val_name} is None"
+    if not is_finite(val):
+        return False, f"{val_name} is not finite: {val}"
+    v = float(val)
+    if (min_value is not None and v < min_value) or (max_val is not None and v> max_val):
+        return False, f"{val_name} out of expected range [{min_value}, {max_val}]: {v}"
+    return True, None
+
 # predict_company_metrics, predict_default_sme, calculate_sustainability_score
 def predict_company_metrics(model, scaler, derived_feature_info, feature_names_order, numerical_cols_to_scale_fit, device, metric_type,
                             years_in_operation, annual_revenue, office_ownership_status, management_team_experience, loan_amount,
@@ -282,8 +296,8 @@ def predict_company_metrics(model, scaler, derived_feature_info, feature_names_o
     user_df = ensure_numeric_columns(user_df, numerical_cols_to_scale_fit)
     
     # Scale only the numerical columns (this includes repayment_status)
-    user_df[numerical_cols_to_scale_fit] = scaler.transform(user_df[numerical_cols_to_scale_fit])
-    
+    scaled_values = scaler.transform(user_df[numerical_cols_to_scale_fit].values)
+    user_df[numerical_cols_to_scale_fit] = scaled_values    
     # NOW drop repayment_status since it's not in the final feature set
     user_df.drop('repayment_status', axis=1, inplace=True, errors='ignore')
     
@@ -294,6 +308,11 @@ def predict_company_metrics(model, scaler, derived_feature_info, feature_names_o
     # Convert to tensor for model input
     user_input_tensor = torch.tensor(user_df.values, dtype=torch.float32).to(device)
 
+    # In predict_company_metrics, before calling model:
+    print(f"DataFrame shape before model: {user_df.shape}")
+    print(f"DataFrame columns: {list(user_df.columns)}")
+    print(f"Sample values:\n{user_df.iloc[0]}")
+
     model.eval()
     with torch.no_grad():
         output = model(user_input_tensor)
@@ -303,6 +322,10 @@ def predict_company_metrics(model, scaler, derived_feature_info, feature_names_o
             prediction = torch.sigmoid(output)
         else:
             raise ValueError("Invalid metric_type specified. Use 'rate' or 'default'.")
+        
+    # After model prediction:
+    print(f"Raw model output: {output.item()}")
+    print(f"After expm1: {prediction.item()}")
     return prediction.item()
 
 
@@ -415,7 +438,7 @@ def predict_default_sme(sample_dict):
 
     # --- Load model and predict ---
     model = ResidualMLP(X_input.shape[1]).to(device)
-    model.load_state_dict(torch.load("residual_mlp_sme.pth", map_location=device))
+    model.load_state_dict(torch.load("assets/residual_mlp_sme.pth", map_location=device))
     model.eval()
 
     with torch.no_grad():
@@ -459,15 +482,16 @@ def get_mistral_summary(metrics_dict):
     result = response.json()
     return parse_mistral_output(result)
 # -------------------------- Prediction Endpoints --------------------------
+
+# ---------- Safe predict_default ---------- :-(
 @app.route('/predict_default', methods=['POST'])
 @token_required
 def predict_default(current_user, role):
     data_def = request.get_json()
     if not data_def:
         return jsonify({"error": "No JSON data received"}), 400
-    
-    # --- Get user_id from username ---
-    conn = sqlite3.connect('database.db')
+
+    conn = sqlite3.connect('assets/database.db')
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
     user_row = cursor.fetchone()
@@ -476,32 +500,36 @@ def predict_default(current_user, role):
         return jsonify({"error": "User not found"}), 400
     user_id = user_row[0]
 
-    # --- Predict default probability ---
     try:
         default_rate = predict_default_sme(data_def)
     except Exception as e:
+        traceback.print_exc()
         conn.close()
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
-    # --- Save prediction in DB ---
+    ok, reason = validate_prediction_value(default_rate, "default_rate", 0.0, 1.0)
+    if not ok:
+        conn.close()
+        return jsonify({"error": f"Invalid model output: {reason}"}), 500
+
     cursor.execute('''
-        INSERT INTO predictions (user_id, company_name, default_rate) 
+        INSERT INTO predictions (user_id, company_name, default_rate)
         VALUES (?, ?, ?)
-    ''', (user_id, data_def.get('company_name', ''), default_rate))
+    ''', (user_id, data_def.get('company_name', ''), float(default_rate)))
     conn.commit()
     conn.close()
-    
-    return jsonify({'default_rate': default_rate}), 200
 
+    return jsonify({'default_rate': float(default_rate)}), 200
+
+# ---------- Safe predict_int_rate ----------
 @app.route('/predict_int_rate', methods=['POST'])
 @token_required
 def predict_int_rate(current_user, role):
     data = request.get_json()
     if not data:
         return jsonify({"error": "No JSON data received"}), 400
-    
-    # --- Get user_id from username ---
-    conn = sqlite3.connect('database.db')
+
+    conn = sqlite3.connect('assets/database.db')
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
     user_row = cursor.fetchone()
@@ -510,33 +538,89 @@ def predict_int_rate(current_user, role):
         return jsonify({"error": "User not found"}), 400
     user_id = user_row[0]
 
-    # --- Predict interest rate using your existing function ---
+    required = ['operation_years','revenue','office_own','team_exp','loan_amt','default_hist','cred_hist_len','repayment_status']
+    for k in required:
+        if k not in data:
+            conn.close()
+            return jsonify({"error": f"Missing required field: {k}"}), 400
+
     try:
+        # compute
         int_rate = predict_company_metrics(
-            model_reg_loaded, scaler, derived_feature_info, feature_names_order_reg, 
-            numerical_cols_to_scale_fit, device, 'rate', 
-            data['operation_years'], data['revenue'], data['office_own'], data['team_exp'], 
-            data['loan_amt'], data['default_hist'], data['cred_hist_len'], data['repayment_status']
+            model_reg_loaded, scaler, derived_feature_info, feature_names_order_reg,
+            numerical_cols_to_scale_fit, device, 'rate',
+            data['operation_years'], data['revenue'], data['office_own'], data['team_exp'],
+            data['loan_amt'], data['default_hist'], data['cred_hist_len'], data.get('repayment_status', 0)
         )
     except Exception as e:
+        traceback.print_exc()
         conn.close()
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
-    # --- Save prediction in DB ---
+    # Validate (choose sensible bounds)
+    ok, reason = validate_prediction_value(int_rate, "int_rate", -0.5, 5.0)
+    if not ok:
+        # Do not insert invalid value into DB
+        conn.close()
+        return jsonify({"error": f"Invalid model output: {reason}"}), 500
+
+    # Insert only valid value
     cursor.execute('''
-        INSERT INTO predictions (user_id, company_name, int_rate) 
+        INSERT INTO predictions (user_id, company_name, int_rate)
         VALUES (?, ?, ?)
-    ''', (user_id, data.get('company_name', ''), int_rate))
+    ''', (user_id, data.get('company_name', ''), float(int_rate)))
     conn.commit()
     conn.close()
-    
-    return jsonify({'int_rate': int_rate}), 200
+
+    return jsonify({'int_rate': float(int_rate)}), 200
+
+
+@app.route('/user_predictions/<company>', methods=['GET'])
+@token_required
+def user_predictions(current_user, role, company):
+    try:
+        conn = sqlite3.connect('assets/database.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT int_rate, default_rate, sus_score, notes, created_at
+            FROM predictions
+            JOIN users ON predictions.user_id = users.id
+            WHERE users.username = ? AND company_name = ?
+            ORDER BY created_at ASC
+        ''', (current_user, company))
+        rows = cursor.fetchall()
+        conn.close()
+
+        formatted = []
+        for r in rows:
+            formatted.append({
+                "int_rate": None if r[0] is None else float(r[0]),
+                "default_rate": None if r[1] is None else float(r[1]),
+                "sus_score": None if r[2] is None else float(r[2]),
+                "notes": r[3],
+                "created_at": r[4]
+            })
+        return jsonify({"predictions": formatted}), 200
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/sustainability_prediction', methods=['POST'])
 @token_required
 def sustainability_prediction(current_user, role):
     data_sus = request.get_json()
+    
+    # Get user_id from database like other endpoints
+    conn = sqlite3.connect('assets/database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
+    user_row = cursor.fetchone()
+    if user_row is None:
+        conn.close()
+        return jsonify({"error": "User not found"}), 400
+    user_id = user_row[0]
+    
     dict_sus = {
         'energy_efficiency': data_sus.get('energy_ef'),
         'carbon_intensity': data_sus.get('carbon_int'),
@@ -547,35 +631,28 @@ def sustainability_prediction(current_user, role):
         'carbon_intensity': 1.0,
         'water_usage': 3500
     }
-    sus_score = calculate_sustainability_score(dict_sus, sector_averages)[0]
     
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
+    try:
+        sus_score = calculate_sustainability_score(dict_sus, sector_averages)[0]
+    except Exception as e:
+        conn.close()
+        return jsonify({"error": f"Calculation failed: {str(e)}"}), 500
+    
+    # Validate
+    ok, reason = validate_prediction_value(sus_score, "sus_score", 0.0, 100.0)
+    if not ok:
+        conn.close()
+        return jsonify({"error": f"Invalid sus_score: {reason}"}), 500
+    
     cursor.execute('''
         INSERT INTO predictions (user_id, company_name, sus_score) 
         VALUES (?, ?, ?)
-    ''', (data_sus.get('user_id', None), data_sus.get('company_name',''), sus_score))
+    ''', (user_id, data_sus.get('company_name', ''), float(sus_score)))
     conn.commit()
     conn.close()
     
-    return jsonify({'sus_score': sus_score}), 200
+    return jsonify({'sus_score': float(sus_score)}), 200
 
-# -------------------------- Past Predictions --------------------------
-@app.route('/user_predictions/<company>', methods=['GET'])
-@token_required
-def user_predictions(current_user, role, company):
-    conn = sqlite3.connect('database.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT int_rate, default_rate, sus_score, notes, created_at
-        FROM predictions
-        JOIN users ON predictions.user_id = users.id
-        WHERE users.username = ? AND company_name = ?
-        ORDER BY created_at ASC
-    ''', (current_user, company))
-    rows = cursor.fetchall()
-    conn.close()
-    return jsonify({"predictions": rows})
 
 # -------------------------- AI Commentary --------------------------
 @app.route('/company_summary', methods=['POST'])
@@ -590,6 +667,49 @@ def company_summary(current_user, role):
     }
     summary_result = get_mistral_summary(metrics_dict)
     return jsonify({"mistral_summary": summary_result}), 200
+
+
+@app.route('/predict_all_and_save', methods=['POST'])
+@token_required
+def predict_all_and_save(current_user, role):
+    payload = request.get_json()
+    int_rate = payload.get('int_rate')
+    default_rate = payload.get('default_rate')
+    sus_score = payload.get('sus_score')
+    company_name = payload.get('company_name', '')
+
+    # Basic validation
+    if int_rate is not None:
+        ok, reason = validate_prediction_value(int_rate, "int_rate", -0.5, 5.0)
+        if not ok:
+            return jsonify({"error": f"Invalid int_rate: {reason}"}), 400
+    if default_rate is not None:
+        ok, reason = validate_prediction_value(default_rate, "default_rate", 0.0, 1.0)
+        if not ok:
+            return jsonify({"error": f"Invalid default_rate: {reason}"}), 400
+    if sus_score is not None:
+        ok, reason = validate_prediction_value(sus_score, "sus_score", 0.0, 100.0)
+        if not ok:
+            return jsonify({"error": f"Invalid sus_score: {reason}"}), 400
+
+    conn = sqlite3.connect('assets/database.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
+    user_row = cursor.fetchone()
+    if user_row is None:
+        conn.close()
+        return jsonify({"error": "User not found"}), 400
+    user_id = user_row[0]
+
+    cursor.execute('''
+        INSERT INTO predictions (user_id, company_name, int_rate, default_rate, sus_score)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, company_name, int_rate, default_rate, sus_score))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"saved": True}), 200
+
 
 # -------------------------- Run Server --------------------------
 if __name__ == '__main__':
