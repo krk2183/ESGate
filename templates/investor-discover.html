@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESGate | Discover SMEs</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='investor.css')}}">
+    
+    
+    <style>
+
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- 1. Top Navigation Bar (Professional) -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Branding -->
+                <a href="{{ url_for('user_page') }}" class="protected-nav-link flex-shrink-0 flex items-center gap-2 cursor-pointer" aria-label="ESGate Home">
+                    <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                    </svg>
+                    <span class="text-2xl font-bold text-gray-900">ESGate</span>
+                </a>
+                
+                <!-- Desktop Links -->
+                <div class="hidden md:flex md:items-center md:space-x-1">
+                    <!-- 
+                    FIX:
+                    - 'rounded-md' REMOVED from all links.
+                    - 'nav-link-active' MOVED to "Home".
+                    - 'nav-link-inactive' ADDED to "Discover".
+                    -->
+                    <a id="discover-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Home</a>
+                    <a id="discover-nav-discover-link" href="{{ url_for('discover_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-active">Discover</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Settings</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Account</a>
+                </div>
+                
+                <!-- Profile Dropdown (Unchanged) -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700 focus:outline-none ring-2 ring-offset-2 ring-transparent hover:ring-blue-700 transition" aria-label="User menu">
+                            {{ username[0] | upper if username else 'I' }}
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Mobile Menu Button (Unchanged) -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <i id="menu-icon-open" class="fas fa-bars block h-6 w-6"></i>
+                        <i id="menu-icon-close" class="fas fa-times hidden h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu (FIXED) -->
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <!-- 
+                    FIX:
+                    - 'active' classes (bg-blue-100) MOVED to "Home".
+                    - 'active' classes REMOVED from "Discover".
+                    -->
+                    <a id="discover-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-900 bg-blue-100" aria-current="page">Home</a>
+                    <a id="discover-nav-discover-link-mobile" href="{{ url_for('discover_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Discover</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Settings</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Account</a>
+                </div>
+                <div class="pt-4 pb-3 border-t border-gray-200">
+                    <!-- ... (mobile profile section - unchanged) ... -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pt-24"> <!-- pt-24 to offset sticky header -->
+
+        <!-- Header Section -->
+        <section class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">Investment Opportunities</h1>
+            <p class="text-lg text-gray-600">Azerbaijan SME Market</p>
+        </section>
+
+        <!-- Filter Bar -->
+        <section class="mb-6 p-4 bg-white rounded-lg shadow-sm">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label for="filter-sector" class="block text-xs font-medium text-gray-500 uppercase">Sector</label>
+                    <select id="filter-sector" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" aria-label="Filter by Sector">
+                        <option>All Sectors</option>
+                        <option>Agriculture</option>
+                        <option>Manufacturing</option>
+                        <option>Technology</option>
+                        <option>Transportation</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-esg" class="block text-xs font-medium text-gray-500 uppercase">ESG Score</label>
+                    <select id="filter-esg" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" aria-label="Filter by ESG Score">
+                        <option>Any</option>
+                        <option>75-100 (Strong)</option>
+                        <option>50-74 (Average)</option>
+                        <option>0-49 (Weak)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-risk" class="block text-xs font-medium text-gray-500 uppercase">Risk Level</label>
+                    <select id="filter-risk" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" aria-label="Filter by Risk Level">
+                        <option>Any</option>
+                        <option>Low (< 30%)</option>
+                        <option>Average (30-50%)</option>
+                        <option>High (> 50%)</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-investment" class="block text-xs font-medium text-gray-500 uppercase">Investment Size</label>
+                    <select id="filter-investment" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md" aria-label="Filter by Investment Size">
+                        <option>Any</option>
+                        <option>< $500k</option>
+                        <option>$500k - $2M</option>
+                        <option>$2M+</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button class="w-full btn btn-primary py-2.5" aria-label="Apply filters">
+                        <i class="fas fa-filter mr-2"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content Area (Table + Filter Sidebar) -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Filter Sidebar -->
+            <aside class="lg:col-span-1 bg-white p-6 rounded-lg shadow-sm h-fit sticky top-24">
+                <h3 class="text-lg font-semibold text-gray-900 border-b pb-3 mb-4">Detailed Filters</h3>
+                
+                <!-- Compliance Filter -->
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 mb-2">Compliance Status</h4>
+                    <div class="space-y-2">
+                        <label class="flex items-center text-sm text-gray-600">
+                            <input type="checkbox" class="h-4 w-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500" aria-label="Filter by CSRD Compliant">
+                            <span class="ml-2">CSRD Compliant</span>
+                        </label>
+                        <label class="flex items-center text-sm text-gray-600">
+                            <input type="checkbox" class="h-4 w-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500" aria-label="Filter by SFDR Aligned">
+                            <span class="ml-2">SFDR Aligned</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Financials Filter -->
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 mb-2">Financials</h4>
+                    <div class="space-y-2">
+                         <label for="filter-revenue" class="block text-xs font-medium text-gray-500">Min. Revenue</label>
+                         <select id="filter-revenue" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Revenue">
+                             <option>Any</option>
+                             <option>$100,000+</option>
+                             <option>$500,000+</option>
+                             <option>$1,000,000+</option>
+                         </select>
+                    </div>
+                     <div class="space-y-2 mt-2">
+                         <label for="filter-employees" class="block text-xs font-medium text-gray-500">Min. Employees</label>
+                         <select id="filter-employees" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Employees">
+                             <option>Any</option>
+                             <option>10+</option>
+                             <option>50+</option>
+                             <option>100+</option>
+                         </select>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Company List View -->
+            <div class="lg:col-span-3">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-sm text-gray-600">Showing 1-10 of 42 companies</span>
+                    <div>
+                        <label for="sort-by" class="text-sm font-medium text-gray-700 mr-2">Sort by:</label>
+                        <select id="sort-by" class="text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" aria-label="Sort companies">
+                            <option>ESG Score (High-Low)</option>
+                            <option>Default Risk (Low-High)</option>
+                            <option>Last Updated</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 data-table">
+                            <thead>
+                                <tr>
+                                    <th>Company Name</th>
+                                    <th>Sector</th>
+                                    <th>ESG Score <i class="fas fa-info-circle text-gray-400 ml-1" title="Aggregate ESG score based on ESGate Methodology v1.2"></i></th>
+                                    <th>Default Risk <i class="fas fa-info-circle text-gray-400 ml-1" title="12-month forward-looking default probability"></i></th>
+                                    <th>Pred. Int. Rate <i class="fas fa-info-circle text-gray-400 ml-1" title="Predicted interest rate for unsecured debt"></i></th>
+                                    <th>Compliance <i class="fas fa-info-circle text-gray-400 ml-1" title="CSRD/SFDR Alignment Status"></i></th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <!-- Row 1: High Score (Expandable) -->
+                                <tr class="expandable-row" data-target-id="details-1" aria-expanded="false" aria-controls="details-1">
+                                    <td class="font-medium text-blue-800">Agritech Solutions Baku</td>
+                                    <td>Agriculture</td>
+                                    <td class="score-green font-mono">82 / 100</td>
+                                    <td class="score-green font-mono">10.5%</td>
+                                    <td class="font-mono">5.50%</td>
+                                    <td><span class="flex items-center score-green"><i class="fas fa-check-circle mr-2"></i>CSRD</span></td>
+                                    <td class="font-mono">2 days ago</td>
+                                </tr>
+                                <!-- Expanded Panel 1 -->
+                                <tr id="details-1" class="hidden">
+                                    <td colspan="7" class="p-6 expanded-panel">
+                                        <h4 class="text-md font-semibold text-gray-800 mb-4">Detailed Metrics: Agritech Solutions Baku</h4>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <h5 class="font-medium mb-2">ESG Breakdown (Bar Chart)</h5>
+                                                <div class="h-48 w-full bg-gray-200 rounded-md">
+                                                    <canvas id="detail-chart-1"></canvas>
+                                                </div>
+                                                <p class="text-xs text-gray-500 mt-2">Data Source: Self-Reported, Verified Q4 2025</p>
+                                            </div>
+                                            <div>
+                                                <h5 class="font-medium mb-2">Risk Assessment Summary</h5>
+                                                <p class="text-sm text-gray-600 mb-4">Default risk is calculated based on 24-month financial projections, credit history, and sector volatility. Methodology last updated Q3 2025.</p>
+                                                <a href="#" class="btn btn-primary text-sm" aria-label="Request full report for Agritech Solutions">
+                                                    <i class="fas fa-file-pdf mr-2"></i> Request Full Due Diligence Report
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Row 2: Mid Score -->
+                                <tr class="expandable-row" data-target-id="details-2" aria-expanded="false" aria-controls="details-2">
+                                    <td class="font-medium text-blue-800">Caspian Green Logistics</td>
+                                    <td>Transportation</td>
+                                    <td class="score-yellow font-mono">69 / 100</td>
+                                    <td class="score-yellow font-mono">28.2%</td>
+                                    <td class="font-mono">7.10%</td>
+                                    <td><span class="flex items-center score-yellow"><i class="fas fa-exclamation-triangle mr-2"></i>SFDR Aligned</span></td>
+                                    <td class="font-mono">5 days ago</td>
+                                </tr>
+                                <!-- Expanded Panel 2 -->
+                                <tr id="details-2" class="hidden">
+                                    <td colspan="7" class="p-6 expanded-panel">... Detailed panel for Caspian Green Logistics ...</td>
+                                </tr>
+                                
+                                <!-- Row 3: Low Score -->
+                                <tr class="expandable-row" data-target-id="details-3" aria-expanded="false" aria-controls="details-3">
+                                    <td class="font-medium text-blue-800">Baku Fabrix</td>
+                                    <td>Manufacturing</td>
+                                    <td class="score-red font-mono">42 / 100</td>
+                                    <td class="score-red font-mono">51.5%</td>
+                                    <td class="font-mono">9.50%</td>
+                                    <td><span class="flex items-center score-red"><i class="fas fa-times-circle mr-2"></i>Non-Compliant</span></td>
+                                    <td class="font-mono">1 day ago</td>
+                                </tr>
+                                <!-- Expanded Panel 3 -->
+                                <tr id="details-3" class="hidden">
+                                    <td colspan="7" class="p-6 expanded-panel">... Detailed panel for Baku Fabrix ...</td>
+                                </tr>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- New Sections Added Here -->
+                
+                <!-- Spotlight Section -->
+                <section id="spotlight" class="mt-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Spotlight: Noteworthy Compliance</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <ul class="divide-y divide-gray-200">
+                            <li class="py-3 flex items-center">
+                                <i class="fas fa-check-circle text-green-600 w-6 text-center mr-4"></i>
+                                <span class="font-medium text-gray-700">Agritech Solutions Baku</span>
+                                <span class="text-sm text-gray-500 ml-auto">Achieved full CSRD alignment 6 months ahead of schedule.</span>
+                            </li>
+                            <li class="py-3 flex items-center">
+                                <i class="fas fa-check-circle text-green-600 w-6 text-center mr-4"></i>
+                                <span class="font-medium text-gray-700">Eco Packaging AZ</span>
+                                <span class="text-sm text-gray-500 ml-auto">Top performer in "Environmental" metrics for Q3.</span>
+                            </li>
+                            <li class="py-3 flex items-center">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 w-6 text-center mr-4"></i>
+                                <span class="font-medium text-gray-700">Caspian Green Logistics</span>
+                                <span class="text-sm text-gray-500 ml-auto">Demonstrated significant improvement in "Social" reporting.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </section>
+                
+                <!-- Detailed Comparison Tool -->
+                <section id="comparison-tool" class="mt-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Detailed Comparison Tool</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label for="compare-1" class="block text-xs font-medium text-gray-500">Company 1</label>
+                                <select id="compare-1" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm">
+                                    <option>Select Company...</option>
+                                    <option>Agritech Solutions Baku</option>
+                                    <option>Caspian Green Logistics</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="compare-2" class="block text-xs font-medium text-gray-500">Company 2</label>
+                                <select id="compare-2" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm">
+                                    <option>Select Company...</option>
+                                    <option>Baku Fabrix</option>
+                                    <option>Eco Packaging AZ</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button class="btn btn-primary w-full py-2.5">Compare</button>
+                            </div>
+                        </div>
+                        <div class="h-80 w-full bg-gray-50 rounded-md border p-2">
+                            <canvas id="comparison-chart"></canvas>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Auto Investor Matching -->
+                <section id="investor-matching" class="mt-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Auto-Matched Investors</h2>
+                    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200 data-table">
+                            <thead>
+                                <tr>
+                                    <th>Investor Name</th>
+                                    <th>Sector Interest</th>
+                                    <th>ESG Preference Match</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="font-medium text-blue-800">GreenFuture Capital</td>
+                                    <td>Renewable Energy, AgriTech</td>
+                                    <td class="font-mono score-green">85%</td>
+                                    <td><a href="#" class="btn btn-secondary text-xs py-1 px-3">View Profile</a></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium text-blue-800">EU Impact Partners</td>
+                                    <td>Social Enterprise, Governance</td>
+                                    <td class="font-mono score-green">78%</td>
+                                    <td><a href="#" class="btn btn-secondary text-xs py-1 px-3">View Profile</a></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+                <!-- Methodology Section -->
+                <section id="methodology" class="mt-12">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Methodology & Documentation</h2>
+                    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                        <button id="accordion-header-methodology" class="accordion-header flex justify-between items-center w-full p-5 text-lg font-semibold text-left text-gray-800 focus:outline-none hover:bg-gray-50 transition">
+                            <div class="flex items-center">
+                                <i class="fas fa-book text-gray-500 text-xl mr-3"></i>
+                                <span>Assessment Methodology & EU Regulatory References</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-gray-500 transform transition-transform duration-300 accordion-icon"></i>
+                        </button>
+                        <div id="accordion-content-methodology" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                            <div class="px-6 pb-6 pt-2 text-gray-600 border-t border-gray-200">
+                                <p class="mb-4 mt-4">Metrics are aligned with EU directives including CSRD and SFDR principles. Scores are weighted based on industry-specific materiality maps.</p>
+                                <div class="flex gap-4">
+                                    <a href="#" class="btn btn-secondary text-sm"><i class="fas fa-download mr-2"></i>Download CSRD Checklist</a>
+                                    <a href="#" class="btn btn-secondary text-sm"><i class="fas fa-download mr-2"></i>Example Report Template</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-10 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+            <!-- Branding -->
+            <div class="col-span-2 md:col-span-1 mb-6 md:mb-0">
+                 <div class="flex items-center gap-2 mb-4">
+                     <svg class="h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" /></svg>
+                     <span class="text-2xl font-bold text-white">ESGate</span>
+                 </div>
+                 <p class="text-sm text-gray-500">&copy; 2025 ESGate. All rights reserved.</p>
+            </div>
+            <!-- Quick Links -->
+            <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Quick Links</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="{{ url_for('discover_page') }}" class="protected-nav-link hover:text-white hover:underline">Discover Companies</a></li>
+                     <li><a href="{{ url_for('analysis') }}" class="protected-nav-link hover:text-white hover:underline">Analysis Tool</a></li>
+                 </ul>
+            </div>
+             <!-- Company -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Company</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">About Us</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Contact</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">EU Regulatory References</a></li>
+                 </ul>
+            </div>
+             <!-- Legal -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Legal</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">Privacy Policy</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Terms of Service</a></li>
+                 </ul>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS for Mobile Menu, Protected Links, and Accordions -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="{{ url_for('static', filename='user-js.js') }}"></script>
+
+
+</body>
+</html>
+

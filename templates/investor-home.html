@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESGate | Investor Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+            color: #374151; /* text-gray-700 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        /* Professional color palette */
+        :root {
+            --color-primary: #1e3a8a; /* Corporate Blue (blue-800) */
+            --color-primary-light: #dbeafe; /* blue-100 */
+            --color-text-primary: #111827; /* gray-900 */
+            --color-text-secondary: #4b5563; /* gray-600 */
+            --color-text-muted: #9ca3af; /* gray-400 */
+            --color-border: #e5e7eb; /* gray-200 */
+            --color-risk-high: #dc2626; /* red-600 */
+            --color-risk-low: #059669; /* green-600 */
+        }
+        
+        /* Style for active nav link */
+        .nav-link-active {
+            color: var(--color-primary);
+            border-bottom: 2px solid var(--color-primary);
+            font-weight: 600;
+        }
+        .nav-link-inactive {
+            color: var(--color-text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+        .nav-link-inactive:hover {
+            color: var(--color-primary);
+            text-decoration: none; /* No underline on hover, just border */
+        }
+        
+        /* Table styles */
+        .data-table th {
+            padding: 0.75rem 1.5rem; /* py-3 px-6 */
+            text-align: left;
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600; /* font-semibold */
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em; /* tracking-wider */
+            background-color: #f9fafb; /* bg-gray-50 */
+            border-bottom: 2px solid var(--color-border);
+        }
+        .data-table td {
+            padding: 1rem 1.5rem; /* py-4 px-6 */
+            white-space: nowrap;
+            font-size: 0.875rem; /* text-sm */
+            color: var(--color-text-primary);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .data-table tbody tr.expandable-row {
+            transition: background-color 0.2s ease;
+        }
+        .data-table tbody tr.expandable-row:hover {
+            background-color: #fbfcfe; /* very light blue */
+            cursor: pointer;
+        }
+        .expanded-panel {
+            background-color: #f9fafb; /* bg-gray-50 */
+        }
+        
+        /* Muted Color Coding */
+        .score-low-risk {
+            color: var(--color-risk-low);
+            font-weight: 500;
+        }
+        .score-high-risk {
+            color: var(--color-risk-high);
+            font-weight: 500;
+        }
+        
+        /* Monospace font for numbers */
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        
+        /* Accordion Icon Rotation */
+        .accordion-header.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+        
+        /* Professional Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding-left: 1rem; padding-right: 1rem; /* px-4 */
+            padding-top: 0.5rem; padding-bottom: 0.5rem; /* py-2 */
+            border: 1px solid transparent;
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 500; /* font-medium */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .btn:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px var(--color-primary-light), 0 1px 2px 0 rgb(0 0 0 / 0.05); /* focus:ring-blue-200 */
+        }
+        .btn-primary {
+            color: white;
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+        .btn-primary:hover {
+            background-color: #1e40af; /* hover:bg-blue-700 */
+        }
+        .btn-secondary {
+            color: var(--color-primary);
+            background-color: var(--color-primary-light);
+            border-color: #bfdbfe; /* border-blue-200 */
+        }
+        .btn-secondary:hover {
+            background-color: #bfdbfe; /* hover:bg-blue-200 */
+        }
+        .btn-outline {
+            color: #374151; /* text-gray-700 */
+            background-color: white;
+            border-color: var(--color-border);
+        }
+        .btn-outline:hover {
+            background-color: #f9fafb; /* hover:bg-gray-50 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- 1. Top Navigation Bar (Professional) -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Branding -->
+                <a href="{{ url_for('user_page') }}" class="protected-nav-link flex-shrink-0 flex items-center gap-2 cursor-pointer" aria-label="ESGate Home">
+                    <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                    </svg>
+                    <span class="text-2xl font-bold text-gray-900">ESGate</span>
+                </a>
+                
+                <!-- Desktop Links -->
+                <div class="hidden md:flex md:items-center md:space-x-1">
+                    <!-- 
+                    FIX:
+                    - 'rounded-md' REMOVED from all links.
+                    - 'nav-link-active' MOVED to "Home".
+                    - 'nav-link-inactive' ADDED to "Discover".
+                    -->
+                    <a id="discover-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-active">Home</a>
+                    <a id="discover-nav-discover-link" href="{{ url_for('discover_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Discover</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Settings</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Account</a>
+                </div>
+                
+                <!-- Profile Dropdown (Unchanged) -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700 focus:outline-none ring-2 ring-offset-2 ring-transparent hover:ring-blue-700 transition" aria-label="User menu">
+                            {{ username[0] | upper if username else 'I' }}
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Mobile Menu Button (Unchanged) -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <i id="menu-icon-open" class="fas fa-bars block h-6 w-6"></i>
+                        <i id="menu-icon-close" class="fas fa-times hidden h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu (FIXED) -->
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <!-- 
+                    FIX:
+                    - 'active' classes (bg-blue-100) MOVED to "Home".
+                    - 'active' classes REMOVED from "Discover".
+                    -->
+                    <a id="discover-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-900 bg-blue-100" aria-current="page">Home</a>
+                    <a id="discover-nav-discover-link-mobile" href="{{ url_for('discover_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Discover</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Settings</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Account</a>
+                </div>
+                <div class="pt-4 pb-3 border-t border-gray-200">
+                    <!-- ... (mobile profile section - unchanged) ... -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pt-24">
+
+        <!-- 2. Hero / Summary Section -->
+        <section class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Azerbaijan SME Market Overview</h1>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Total SMEs Covered</h4>
+                    <p class="text-3xl font-semibold text-gray-900 mt-1">150+</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wide">CSRD-Compliant SMEs</h4>
+                    <p class="text-3xl font-semibold text-gray-900 mt-1">42</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Average ESG Score</h4>
+                    <p class="text-3xl font-semibold text-gray-900 mt-1">68/100</p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <h4 class="text-sm font-medium text-gray-500 uppercase tracking-wide">Reports Downloaded</h4>
+                    <p class="text-3xl font-semibold text-gray-900 mt-1">210</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Quick Filters / Search Bar -->
+        <section class="mb-6 p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                <div class="lg:col-span-2">
+                    <label for="filter-search" class="block text-xs font-medium text-gray-500 uppercase">Search Company</label>
+                    <input type="text" id="filter-search" placeholder="Enter company name..." class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" aria-label="Search by company name">
+                </div>
+                <div>
+                    <label for="filter-sector" class="block text-xs font-medium text-gray-500 uppercase">Sector</label>
+                    <select id="filter-sector" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" aria-label="Filter by Sector">
+                        <option>All Sectors</option>
+                        <option>Agriculture</option>
+                        <option>Manufacturing</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-esg" class="block text-xs font-medium text-gray-500 uppercase">ESG Score</label>
+                    <select id="filter-esg" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" aria-label="Filter by ESG Score">
+                        <option>Any Range</option>
+                        <option>75-100</option>
+                        <option>50-74</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-risk" class="block text-xs font-medium text-gray-500 uppercase">Risk Level</label>
+                    <select id="filter-risk" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" aria-label="Filter by Risk Level">
+                        <option>Any</option>
+                        <option>Low (< 30%)</option>
+                        <option>Average (30-50%)</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button class="w-full btn btn-primary py-2.5" aria-label="Apply filters">
+                        <i class="fas fa-filter mr-2"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Key Metrics / Insights Section -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Market Insights</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- ESG Distribution Chart -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">ESG Score Distribution by Sector</h3>
+                    <div class="h-64 w-full">
+                        <canvas id="sectorBarChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Source: ESGate Internal Data, Q4 2025</p>
+                </div>
+                <!-- Risk Distribution Chart -->
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Default Probability Distribution</h3>
+                    <div class="h-64 w-full">
+                        <canvas id="riskHistogramChart"></canvas>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Source: ESGate Predictive Model v1.1</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Company List (Table) & Filter Sidebar -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Filter Sidebar -->
+            <aside class="lg:col-span-1 bg-white p-6 rounded-lg shadow-sm h-fit sticky top-24">
+                <h3 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3 mb-4">Advanced Filters</h3>
+                
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 mb-2">Compliance Status</h4>
+                    <div class="space-y-2">
+                        <label class="flex items-center text-sm text-gray-600">
+                            <input type="checkbox" class="h-4 w-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500" aria-label="Filter by CSRD Compliant">
+                            <span class="ml-2">CSRD Compliant</span>
+                        </label>
+                        <label class="flex items-center text-sm text-gray-600">
+                            <input type="checkbox" class="h-4 w-4 text-blue-700 border-gray-300 rounded focus:ring-blue-500" aria-label="Filter by SFDR Aligned">
+                            <span class="ml-2">SFDR Aligned</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 mb-2">Financial Thresholds</h4>
+                    <div class="space-y-3">
+                         <div>
+                             <label for="filter-revenue" class="block text-xs font-medium text-gray-500">Min. Revenue</label>
+                             <select id="filter-revenue" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Revenue">
+                                 <option>Any</option>
+                                 <option>$100,000+</option>
+                                 <option>$500,000+</option>
+                             </select>
+                         </div>
+                         <div>
+                             <label for="filter-employees" class="block text-xs font-medium text-gray-500">Min. Employees</label>
+                             <select id="filter-employees" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Employees">
+                                 <option>Any</option>
+                                 <option>10+</option>
+                                 <option>50+</option>
+                             </select>
+                         </div>
+                    </div>
+                </div>
+                
+                <button class="btn btn-outline w-full" aria-label="Clear all filters">Clear Filters</button>
+            </aside>
+
+            <!-- Company List Table -->
+            <div class="lg:col-span-3">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-sm text-gray-600">Showing 1-10 of 42 companies</span>
+                    <button class="btn btn-secondary text-xs" aria-label="Export selected companies">
+                        <i class="fas fa-download mr-2"></i> Export Comparison
+                    </button>
+                </div>
+
+                <div class="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 data-table">
+                            <thead>
+                                <tr>
+                                    <th>Company Name</th>
+                                    <th>Sector</th>
+                                    <th>ESG Score</th>
+                                    <th>Default Risk %</th>
+                                    <th>Pred. Int. Rate</th>
+                                    <th>Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <!-- Row 1: High Score (Expandable) -->
+                                <tr class="expandable-row" data-target-id="details-1" aria-expanded="false" aria-controls="details-1">
+                                    <td class="font-medium text-blue-800">Agritech Solutions Baku</td>
+                                    <td>Agriculture</td>
+                                    <td class="score-low-risk font-mono">82 / 100</td>
+                                    <td class="score-low-risk font-mono">10.5%</td>
+                                    <td class="font-mono">5.50%</td>
+                                    <td class="font-mono">2 days ago</td>
+                                </tr>
+                                <!-- Expanded Panel 1 -->
+                                <tr id="details-1" class="hidden">
+                                    <td colspan="6" class="p-6 expanded-panel">
+                                        <h4 class="text-md font-semibold text-gray-800 mb-4">Detailed Metrics: Agritech Solutions Baku</h4>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <h5 class="font-medium mb-2">ESG Breakdown</h5>
+                                                <div class="h-48 w-full bg-gray-100 rounded-md p-2">
+                                                    <canvas id="detail-chart-1"></canvas>
+                                                </div>
+                                                <p class="text-xs text-gray-500 mt-2">Source: Self-Reported, Verified Q4 2025</p>
+                                            </div>
+                                            <div>
+                                                <h5 class="font-medium mb-2">Risk Assessment Summary</h5>
+                                                <p class="text-sm text-gray-600 mb-4">Default risk derived from 24-month financial projections and sector volatility. <a href="#" class="text-blue-700 hover:underline">See methodology</a>.</p>
+                                                <a href="#" class="btn btn-primary text-sm" aria-label="Request full report for Agritech Solutions">
+                                                    <i class="fas fa-file-pdf mr-2"></i> Request Full Due Diligence Report
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Row 2: Mid Score -->
+                                <tr class="expandable-row" data-target-id="details-2" aria-expanded="false" aria-controls="details-2">
+                                    <td class="font-medium text-blue-800">Caspian Green Logistics</td>
+                                    <td>Transportation</td>
+                                    <td class="font-mono">69 / 100</td>
+                                    <td class="font-mono">28.2%</td>
+                                    <td class="font-mono">7.10%</td>
+                                    <td class="font-mono">5 days ago</td>
+                                </tr>
+                                <!-- Expanded Panel 2 -->
+                                <tr id="details-2" class="hidden">
+                                    <td colspan="6" class="p-6 expanded-panel">
+                                        <p>... Detailed panel for Caspian Green Logistics ...</p>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Row 3: Low Score -->
+                                <tr class="expandable-row" data-target-id="details-3" aria-expanded="false" aria-controls="details-3">
+                                    <td class="font-medium text-blue-800">Baku Fabrix</td>
+                                    <td>Manufacturing</td>
+                                    <td class="score-high-risk font-mono">42 / 100</td>
+                                    <td class="score-high-risk font-mono">51.5%</td>
+                                    <td class="font-mono">9.50%</td>
+                                    <td class="font-mono">1 day ago</td>
+                                </tr>
+                                <!-- Expanded Panel 3 -->
+                                <tr id="details-3" class="hidden">
+                                    <td colspan="6" class="p-6 expanded-panel">
+                                        <p>... Detailed panel for Baku Fabrix ...</p>
+                                    </td>
+                                </tr>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-10 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+            <!-- Branding -->
+            <div class="col-span-2 md:col-span-1 mb-6 md:mb-0">
+                 <div class="flex items-center gap-2 mb-4">
+                     <svg class="h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" /></svg>
+                     <span class="text-2xl font-bold text-white">ESGate</span>
+                 </div>
+                 <p class="text-sm text-gray-500">&copy; 2025 ESGate. All rights reserved.</p>
+            </div>
+            <!-- Quick Links -->
+            <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Quick Links</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="{{ url_for('discover_page') }}" class="protected-nav-link hover:text-white hover:underline">Discover Companies</a></li>
+                     <li><a href="{{ url_for('analysis') }}" class="protected-nav-link hover:text-white hover:underline">Analysis Tool</a></li>
+                 </ul>
+            </div>
+             <!-- Company -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Company</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">About Us</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Contact</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">EU Regulatory References</a></li>
+                 </ul>
+            </div>
+             <!-- Legal -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Legal</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">Privacy Policy</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Terms of Service</a></li>
+                 </ul>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS for Mobile Menu, Protected Links, and Page Interactivity -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconOpen = document.getElementById('menu-icon-open');
+            const iconClose = document.getElementById('menu-icon-close');
+
+            if (menuButton && mobileMenu && iconOpen && iconClose) {
+                menuButton.addEventListener('click', function () {
+                    mobileMenu.classList.toggle('hidden');
+                    iconOpen.classList.toggle('hidden');
+                    iconClose.classList.toggle('hidden');
+                    const isExpanded = menuButton.getAttribute('aria-expanded') === 'true';
+                    menuButton.setAttribute('aria-expanded', !isExpanded);
+                });
+            }
+
+            document.body.addEventListener('click', function(event) {
+                const protectedLink = event.target.closest('a.protected-nav-link'); 
+                if (protectedLink) {
+                    event.preventDefault(); 
+                    const url = protectedLink.getAttribute('href');
+                    if (url && url !== '#') {
+                         loadProtectedPage(url); 
+                    }
+                }
+            });
+
+            const accordionHeader = document.getElementById('accordion-header-methodology');
+            const accordionContent = document.getElementById('accordion-content-methodology');
+            
+            if (accordionHeader && accordionContent) {
+                accordionHeader.addEventListener('click', () => {
+                    const icon = accordionHeader.querySelector('.accordion-icon');
+                    accordionHeader.classList.toggle('active');
+                    if (icon) icon.classList.toggle('rotate-180');
+
+                    if (accordionContent.style.maxHeight) {
+                        accordionContent.style.maxHeight = null;
+                        setTimeout(() => { 
+                            accordionContent.style.paddingTop = "0"; 
+                            accordionContent.style.paddingBottom = "0"; 
+                        }, 300);
+                    } else {
+                        accordionContent.style.paddingTop = "0.5rem";
+                        accordionContent.style.paddingBottom = "1.5rem";
+                        accordionContent.style.maxHeight = accordionContent.scrollHeight + "px";
+                    } 
+                });
+            }
+            
+            const expandableRows = document.querySelectorAll('tr.expandable-row');
+            expandableRows.forEach(row => {
+                row.addEventListener('click', () => {
+                    const targetId = row.getAttribute('data-target-id');
+                    const targetPanel = document.getElementById(targetId);
+                    if (targetPanel) {
+                        const isHidden = targetPanel.classList.toggle('hidden');
+                        row.setAttribute('aria-expanded', !isHidden);
+                    }
+                });
+            });
+
+            async function loadProtectedPage(url) {
+                 const token = localStorage.getItem('authToken');
+                 if (!token) {
+                     console.log("No auth token found, redirecting to login.");
+                     window.location.href = "{{ url_for('login_page') }}";
+                     return;
+                 }
+                 try {
+                     const response = await fetch(url, {
+                         method: 'GET',
+                         headers: { 'Authorization': `Bearer ${token}` }
+                     });
+                     if (response.ok) {
+                         const pageHtml = await response.text();
+                         document.open(); 
+                         document.write(pageHtml);
+                         document.close();
+                     } else {
+                         console.log("Response not OK, removing token and redirecting.");
+                         localStorage.removeItem('authToken');
+                         alert('Session expired or invalid. Please log in again.');
+                         window.location.href = "{{ url_for('login_page') }}";
+                     }
+                 } catch (error) {
+                     console.error('Failed to load protected page:', error);
+                 }
+             }
+             
+             
+             const barCtx = document.getElementById('sectorBarChart')?.getContext('2d');
+             if (barCtx) {
+                 new Chart(barCtx, {
+                     type: 'bar',
+                     data: {
+                         labels: ['Agriculture', 'Manufacturing', 'Technology', 'Transport', 'Utilities'],
+                         datasets: [{
+                             label: 'Avg. ESG Score',
+                             data: [65, 58, 75, 62, 70],
+                             backgroundColor: 'rgba(30, 58, 138, 0.7)', 
+                             borderColor: 'rgba(30, 58, 138, 1)',
+                             borderWidth: 1
+                         }]
+                     },
+                     options: {
+                         responsive: true, maintainAspectRatio: false,
+                         scales: { y: { beginAtZero: true, max: 100 } },
+                         plugins: { legend: { display: false } }
+                     }
+                 });
+             }
+             
+             const histCtx = document.getElementById('riskHistogramChart')?.getContext('2d');
+             if (histCtx) {
+                 new Chart(histCtx, {
+                     type: 'bar',
+                     data: {
+                         labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
+                         datasets: [{
+                             label: 'Number of SMEs',
+                             data: [15, 28, 8, 3, 1],
+                             backgroundColor: 'rgba(75, 85, 99, 0.7)', 
+                             borderColor: 'rgba(75, 85, 99, 1)',
+                             borderWidth: 1
+                         }]
+                     },
+                     options: {
+                         responsive: true, maintainAspectRatio: false,
+                         scales: { y: { beginAtZero: true } },
+                         plugins: { legend: { display: false } }
+                     }
+                 });
+             }
+             
+             const detailCtx = document.getElementById('detail-chart-1')?.getContext('2d');
+             if (detailCtx) {
+                 new Chart(detailCtx, {
+                     type: 'bar',
+                     data: {
+                         labels: ['Env.', 'Social', 'Gov.'],
+                         datasets: [
+                             {
+                                 label: 'Agritech Solutions',
+                                 data: [85, 75, 90],
+                                 backgroundColor: 'rgba(30, 58, 138, 0.8)', // blue-800
+                                 maxBarThickness: 50,
+                             },
+                             {
+                                 label: 'Sector Average',
+                                 data: [60, 65, 70],
+                                 backgroundColor: 'rgba(209, 213, 219, 0.8)', // gray-300
+                                 maxBarThickness: 50,
+                             }
+                         ]
+                     },
+                     options: {
+                         responsive: true, maintainAspectRatio: false,
+                         scales: { y: { beginAtZero: true, max: 100 } },
+                         plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+                     }
+                 });
+             }
+             
+             // Comparison Chart
+             const compareCtx = document.getElementById('comparison-chart')?.getContext('2d');
+             if (compareCtx) {
+                 new Chart(compareCtx, {
+                     type: 'bar',
+                     data: {
+                         labels: ['ESG Score', 'Default Risk', 'Compliance'],
+                         datasets: [
+                             {
+                                 label: 'Company 1 (Select...)',
+                                 data: [0, 0, 0],
+                                 backgroundColor: 'rgba(30, 58, 138, 0.8)',
+                             },
+                             {
+                                 label: 'Company 2 (Select...)',
+                                 data: [0, 0, 0],
+                                 backgroundColor: 'rgba(156, 163, 175, 0.8)',
+                             }
+                         ]
+                     },
+                     options: {
+                         responsive: true, maintainAspectRatio: false,
+                         scales: { y: { beginAtZero: true, max: 100 } },
+                         plugins: { legend: { position: 'bottom' } }
+                     }
+                 });
+             }
+
+        }); // End DOMContentLoaded
+    </script>
+
+</body>
+</html>
+

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+</head>
+<body>
+    <div class="container-2">
+        <form class="formBox-2" id="signupForm">
+            <h1>Create an Account</h1>
+            <input type="text" name="username" id="inputField-2" placeholder="Choose ID or Company Name" class="inputField-2" required>
+            <input type="password" name="password" id="passwordField-2" placeholder="Choose Password" class="inputField-2" required>
+            <input type="password" id="passwordField-3" placeholder="Repeat Password" class="inputField-3" required>
+
+            <div class="dropdown">
+                <label for="roleSelect" class="floatingLabel">Role</label>
+                <select name="role" id="roleSelect" class="inputField-3" required>
+                    <option href="#" value="enterprise">Enterprise</option>
+                    <option href="#" value="investor">Investor</option>
+                </select>
+            </div>
+
+            <button type="button" id="submitButton-2" class="submitButton-2">Sign up</button>
+            <h5 class="dont-2">Already have an account?</h5>
+        </form>
+        <a href="{{ url_for('home') }}">
+            <button id="log-in" class="log-in">Log in</button>
+        </a>
+        <div class="errorbox-2 hidden" id="errorbox-2">
+            <h3 class="errortext-2">Error: User already exists!</h3>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='backend.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESGate - Home</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Custom CSS (optional, but good for overriding or specific elements not covered by Tailwind) --><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+     <style>
+        .nav-link-active {
+            color: #1e3a8a;
+            border-bottom: 2px solid #1e3a8a;
+            font-weight: 600;
+        }
+        .nav-link-inactive {
+            color: #4b5563;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .nav-link-inactive:hover {
+            color: #1e3a8a;
+            border-bottom-color: #1e3a8a;
+        }
+     </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Branding -->
+                <a href="{{ url_for('user_page') }}" class="protected-nav-link flex-shrink-0 flex items-center gap-2 cursor-pointer" aria-label="ESGate Home">
+                    <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                    </svg>
+                    <span class="text-2xl font-bold text-gray-900">ESGate</span>
+                </a>
+                
+                <!-- Desktop Links -->
+                <div class="hidden md:flex md:items-center md:space-x-1">
+                    <a id="discover-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-active">Home</a>
+                    <a id="discover-nav-discover-link" href="{{ url_for('discover_page_user') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Discover</a>
+                    <a id="discover-nav-analysis-link" href="{{ url_for('analysis') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Analysis</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Settings</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Account</a>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700 focus:outline-none ring-2 ring-offset-2 ring-transparent hover:ring-blue-700 transition" aria-label="User menu">
+                            {{ username[0] | upper if username else 'I' }}
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <i id="menu-icon-open" class="fas fa-bars block h-6 w-6"></i>
+                        <i id="menu-icon-close" class="fas fa-times hidden h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu (FIXED) -->
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+
+                    <a id="discover-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-900 bg-blue-100" aria-current="page">Home</a>
+                    <a id="discover-nav-discover-link-mobile" href="{{ url_for('discover_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Discover</a>
+                    <a id="discover-nav-analysis-link-mobile" href="{{ url_for('analysis') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Analysis</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Settings</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Account</a>
+                </div>
+                <div class="pt-4 pb-3 border-t border-gray-200">
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Mobile Navigation Overlay --><div id="mobile-menu-overlay" class="fixed inset-0 bg-white bg-opacity-95 z-40 hidden md:hidden flex-col items-center justify-center space-y-8">
+        <button id="close-mobile-menu" class="absolute top-4 right-6 text-gray-600 hover:text-green-700 focus:outline-none">
+            <i class="fas fa-times text-2xl"></i>
+        </button>
+        <nav class="flex flex-col space-y-6 text-xl">
+            <a id="home-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link text-gray-600 hover:text-green-700 font-medium transition duration-300 active-link">Home</a>
+            <a href="#" class="text-gray-600 hover:text-green-700 font-medium transition duration-300">Discover</a>
+            <a id="home-nav-analysis-link-mobile" href="{{ url_for('analysis') }}" class="protected-nav-link text-gray-600 hover:text-green-700 font-medium transition duration-300">Analysis</a>
+            <a href="#" class="text-gray-600 hover:text-green-700 font-medium transition duration-300">Settings</a>
+            <a href="#" class="text-gray-600 hover:text-green-700 font-medium transition duration-300">Account</a>
+        </nav>
+    </div>
+
+    <main class="container mx-auto px-4 py-8 mt-20"> <!-- Added mt-20 to clear fixed header --><!-- 2. Welcome & Snapshot Banner --><section class="bg-gradient-to-r from-green-500 to-green-700 text-white p-8 rounded-lg shadow-lg mb-8 flex flex-col md:flex-row items-center justify-between">
+            <div class="text-center md:text-left mb-4 md:mb-0">
+                <h1 class="text-3xl font-bold mb-2">Welcome back, {{ company_name | default('User') }} 👋</h1>
+                <p class="text-lg mb-2" id="esg-score-summary">
+                    Your last ESG score: <span class="font-semibold text-xl" id="esg-score-value">{{ last_esg_score | default('N/A') }}</span>/100 
+                    — <span class="font-semibold" id="esg-tier">{{ esg_tier | default('Tier Unknown') }}</span>.
+                </p>
+                <p class="text-md" id="esg-improvement">
+                    You’ve improved by 
+                    <span class="font-semibold {{ 'text-green-200' if esg_improvement_positive else 'text-red-200' }}" id="esg-improvement-value">
+                        {{ esg_improvement | default('+0%') }}
+                        {% if esg_improvement_positive %}<i class="fas fa-arrow-up ml-1"></i>{% else %}<i class="fas fa-arrow-down ml-1"></i>{% endif %}
+                    </span> 
+                    since last month.
+                </p>
+            </div>
+            <div class="flex flex-col items-center">
+                <!-- Placeholder for a circular mini-chart or badge --><div class="relative w-24 h-24 rounded-full bg-white flex items-center justify-center text-green-700 text-xl font-bold border-4 border-green-300">
+                    {{ esg_tier_short | default('N/A') }}
+                    <span class="absolute text-xs bottom-2">TIER</span>
+                </div>
+                <a href="{{ url_for('analysis') }}" class="mt-4 px-6 py-3 bg-white text-green-700 font-bold rounded-full hover:bg-green-100 transition duration-300 shadow protected-nav-link">
+                    View Detailed Report
+                </a>
+            </div>
+        </section>
+
+        <!-- 3. Your ESG Overview Panel --><section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Your ESG Overview</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Environmental Card --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-leaf text-green-600 text-3xl mr-3"></i>
+                            <h3 class="text-xl font-semibold text-gray-900">Environmental</h3>
+                        </div>
+                        <p class="text-4xl font-bold text-gray-900 mb-2" id="environmental-score">{{ environmental_score | default('N/A') }}/100</p>
+                        <p class="text-sm text-gray-600 mb-4">Status: <span class="font-medium text-red-600">Needs Improvement</span></p>
+                        <!-- Placeholder for mini line graph --><canvas id="environmentalChart" class="w-full h-24"></canvas>
+                    </div>
+                    <a href="{{ url_for('analysis') }}#environmental-recommendations" class="mt-4 w-full text-center px-4 py-2 bg-green-50 text-green-700 font-semibold rounded-md hover:bg-green-100 transition duration-300 protected-nav-link">
+                        See Recommendations
+                    </a>
+                </div>
+
+                <!-- Social Card --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-people-group text-blue-600 text-3xl mr-3"></i>
+                            <h3 class="text-xl font-semibold text-gray-900">Social</h3>
+                        </div>
+                        <p class="text-4xl font-bold text-gray-900 mb-2" id="social-score">{{ social_score | default('N/A') }}/100</p>
+                        <p class="text-sm text-gray-600 mb-4">Status: <span class="font-medium text-yellow-600">On Track</span></p>
+                        <!-- Placeholder for mini line graph --><canvas id="socialChart" class="w-full h-24"></canvas>
+                    </div>
+                    <a href="{{ url_for('analysis') }}#social-recommendations" class="mt-4 w-full text-center px-4 py-2 bg-blue-50 text-blue-700 font-semibold rounded-md hover:bg-blue-100 transition duration-300 protected-nav-link">
+                        See Recommendations
+                    </a>
+                </div>
+
+                <!-- Governance Card --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-building text-purple-600 text-3xl mr-3"></i>
+                            <h3 class="text-xl font-semibold text-gray-900">Governance</h3>
+                        </div>
+                        <p class="text-4xl font-bold text-gray-900 mb-2" id="governance-score">{{ governance_score | default('N/A') }}/100</p>
+                        <p class="text-sm text-gray-600 mb-4">Status: <span class="font-medium text-green-600">Strong</span></p>
+                        <!-- Placeholder for mini line graph --><canvas id="governanceChart" class="w-full h-24"></canvas>
+                    </div>
+                    <a href="{{ url_for('analysis') }}#governance-recommendations" class="mt-4 w-full text-center px-4 py-2 bg-purple-50 text-purple-700 font-semibold rounded-md hover:bg-purple-100 transition duration-300 protected-nav-link">
+                        See Recommendations
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Recommended Actions (AI Insights Section) --><section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Recommended Actions</h2>
+            <div class="bg-white rounded-lg shadow-md divide-y divide-gray-200">
+                <!-- Recommendation 1 --><div class="accordion-item">
+                    <button class="accordion-header flex justify-between items-center w-full p-6 text-lg font-semibold text-left text-gray-800 focus:outline-none">
+                        <span>Improve waste management reporting.</span>
+                        <span class="text-gray-500 text-sm">Impact: <i class="fas fa-star text-yellow-500"></i><i class="fas fa-star text-yellow-500"></i><i class="fas fa-star text-yellow-500"></i><i class="far fa-star text-gray-400"></i><i class="far fa-star text-gray-400"></i></span>
+                        <i class="fas fa-chevron-down text-gray-500 transform transition-transform duration-300 ml-4"></i>
+                    </button>
+                    <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out p-0">
+                        <div class="px-6 pb-6 pt-0 text-gray-600">
+                            <p class="mb-4">We noticed your Environmental score is lagging. Consider implementing energy efficiency tracking to improve performance. This can lead to significant cost savings and a higher ESG rating.</p>
+                            <button class="px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition duration-300">View Detailed Steps</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendation 2 --><div class="accordion-item">
+                    <button class="accordion-header flex justify-between items-center w-full p-6 text-lg font-semibold text-left text-gray-800 focus:outline-none">
+                        <span>Enhance employee diversity initiatives.</span>
+                        <span class="text-gray-500 text-sm">Impact: <i class="fas fa-star text-yellow-500"></i><i class="fas fa-star text-yellow-500"></i><i class="fas fa-star text-yellow-500"></i><i class="fas fa-star text-yellow-500"></i><i class="far fa-star text-gray-400"></i></span>
+                        <i class="fas fa-chevron-down text-gray-500 transform transition-transform duration-300 ml-4"></i>
+                    </button>
+                    <div class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out p-0">
+                        <div class="px-6 pb-6 pt-0 text-gray-600">
+                            <p class="mb-4">Your Social metrics can benefit from stronger diversity and inclusion programs. This improves employee satisfaction and strengthens your brand reputation.</p>
+                            <button class="px-4 py-2 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition duration-300">View Detailed Steps</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Progress & Achievements Section --><section class="mb-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Your ESG Journey</h2>
+            <div class="flex items-center mb-6">
+                <span class="text-lg font-semibold mr-4">Level 3</span>
+                <div class="w-full bg-gray-200 rounded-full h-4 relative">
+                    <div class="bg-green-500 h-4 rounded-full" style="width: {{ progress_percentage | default(60) }}%;"></div>
+                    <span class="absolute right-2 top-0 bottom-0 text-white text-xs font-bold flex items-center">{{ progress_percentage | default(60) }}%</span>
+                </div>
+                <span class="text-lg font-semibold ml-4">Level 4</span>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Milestones Unlocked:</h3>
+            <ul class="space-y-2 text-gray-600 mb-6">
+                <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i> Completed first ESG report.</li>
+                <li class="flex items-center"><i class="fas fa-check-circle text-green-500 mr-2"></i> Improved by 10% in Governance.</li>
+                <li class="flex items-center"><i class="fas fa-award text-yellow-500 mr-2"></i> Recognized for renewable energy initiatives.</li>
+            </ul>
+
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Next Goal:</h3>
+            <p class="text-lg flex items-center text-gray-700">
+                <i class="fas fa-circle-notch text-blue-500 mr-2 animate-spin-slow"></i> Reach <span class="font-bold text-blue-600">Gold Tier</span> in overall ESG Score.
+            </p>
+        </section>
+
+        <!-- 6. Investor Match & Opportunities --><section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Investor Match & Opportunities</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-blue-50 p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col items-start">
+                    <i class="fas fa-handshake text-blue-600 text-4xl mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">You match with 3 verified investors!</h3>
+                    <p class="text-gray-700 mb-4">Seeking SMEs in Renewable Energy with strong Environmental scores.</p>
+                    <button class="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md hover:bg-blue-600 transition duration-300">
+                        View Matches <i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-4">Top Investors Interested in Your Sector:</h3>
+                    <ul class="space-y-3 text-gray-700">
+                        <li class="flex items-center">
+                            <i class="fas fa-leaf text-green-500 mr-2"></i>
+                            <span class="font-medium">GreenFund Europe</span> – 85% match
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                            <span class="font-medium">EUREnovate</span> – 76% match
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-seedling text-teal-500 mr-2"></i>
+                            <span class="font-medium">Sustainable Ventures</span> – 70% match
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. Learning & Insights Feed --><section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Learning & Insights Feed</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Learning Card 1 --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Top 5 ESG practices in 2025</h3>
+                        <p class="text-gray-700 text-sm mb-4">Stay ahead with the latest industry standards.</p>
+                    </div>
+                    <a href="#" class="text-green-700 font-semibold hover:underline">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
+                </div>
+                <!-- Learning Card 2 --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">How SMEs improved governance</h3>
+                        <p class="text-gray-700 text-sm mb-4">Case studies from your sector.</p>
+                    </div>
+                    <a href="#" class="text-green-700 font-semibold hover:underline">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
+                </div>
+                <!-- Learning Card 3 --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">New EU ESG directive explained (Azerbaijani context)</h3>
+                        <p class="text-gray-700 text-sm mb-4">Understand the regulatory landscape.</p>
+                    </div>
+                    <a href="#" class="text-green-700 font-semibold hover:underline">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 8. Footer (Compact, Clean) --><footer class="bg-gray-800 text-gray-300 py-6 text-center text-sm mt-8">
+        <div class="container mx-auto px-4">
+            <p>ESGate &copy; 2025</p>
+            <nav class="mt-2 space-x-4">
+                <a href="#" class="hover:text-white transition duration-300">Privacy Policy</a>
+                <a href="#" class="hover:text-white transition duration-300">Contact</a>
+                <a href="#" class="hover:text-white transition duration-300">About</a>
+            </nav>
+        </div>
+    </footer>
+
+    <!-- Chart.js CDN for potential use with the canvas elements --><script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='user-js.js') }}"></script>
+
+    <script>
+        // Simple JavaScript for accordion functionality on this page
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const icon = header.querySelector('i.fa-chevron-down');
+
+                header.classList.toggle('active');
+                icon.classList.toggle('rotate-180'); // Rotate arrow icon
+
+                if (content.style.maxHeight) {
+                    content.style.maxHeight = null;
+                    content.style.padding = "0 1.5rem"; // Reset padding
+                } else {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    content.style.padding = "1.5rem"; // Apply padding when open
+                }
+            });
+        });
+
+        // Mobile menu toggle
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const closeMobileMenu = document.getElementById('close-mobile-menu');
+        const mobileMenuOverlay = document.getElementById('mobile-menu-overlay');
+
+        if (mobileMenuButton) {
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenuOverlay.classList.remove('hidden');
+                mobileMenuOverlay.classList.add('flex');
+            });
+        }
+        if (closeMobileMenu) {
+            closeMobileMenu.addEventListener('click', () => {
+                mobileMenuOverlay.classList.add('hidden');
+                mobileMenuOverlay.classList.remove('flex');
+            });
+        }
+        // Also close mobile menu if a link inside it is clicked
+        if (mobileMenuOverlay) {
+            mobileMenuOverlay.addEventListener('click', (event) => {
+                if (event.target.tagName === 'A') {
+                    mobileMenuOverlay.classList.add('hidden');
+                    mobileMenuOverlay.classList.remove('flex');
+                }
+            });
+        }
+
+        // Example for dynamically updating the welcome banner (will be driven by backend data)
+        // document.addEventListener('DOMContentLoaded', () => {
+        //     const companyName = "EcoBuild LLC"; // Replace with Jinja variable
+        //     const lastEsgScore = 72; // Replace with Jinja variable
+        //     const esgTier = "Silver Tier"; // Replace with Jinja variable
+        //     const esgImprovement = 8; // Replace with Jinja variable (number)
+
+        //     document.getElementById('company-name').textContent = companyName;
+        //     document.getElementById('esg-score-value').textContent = lastEsgScore;
+        //     document.getElementById('esg-tier').textContent = esgTier;
+        //     document.getElementById('esg-improvement-value').textContent = `+${esgImprovement}%`;
+        //     if (esgImprovement > 0) {
+        //         document.getElementById('esg-improvement-value').classList.add('text-green-200');
+        //         document.getElementById('esg-improvement-value').innerHTML += '<i class="fas fa-arrow-up ml-1"></i>';
+        //     } else if (esgImprovement < 0) {
+        //         document.getElementById('esg-improvement-value').classList.add('text-red-200');
+        //         document.getElementById('esg-improvement-value').innerHTML += '<i class="fas fa-arrow-down ml-1"></i>';
+        //     } else {
+        //         document.getElementById('esg-improvement-value').innerHTML += '<i class="fas fa-equals ml-1"></i>';
+        //     }
+
+        //     // Update the circular tier badge (e.g., "S" for Silver)
+        //     document.querySelector('.relative.w-24.h-24 span:first-child').textContent = esgTier.charAt(0);
+        // });
+
+    </script>
+</body>
+</html>

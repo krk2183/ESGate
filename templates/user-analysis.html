@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard</title>
+    <!-- Font and Chart.js dependencies -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #0d47a1;
+            --secondary-color: #1565c0;
+            --accent-color: #4caf50;
+            --background-color: #f4f7f6;
+            --text-color: #333;
+            --card-bg-color: #ffffff;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .main-header {
+            background-color: #fff;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .main-nav {
+            max-width: 1280px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            flex-wrap: wrap; /* Allows items to wrap for mobile view */
+            justify-content: space-between;
+            align-items: center;
+        }
+        .nav-branding {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo-svg {
+            height: 2rem;
+            width: 2rem;
+            color: #10b981;
+        }
+        .logo-text {
+            font-size: 1.5rem;
+            line-height: 2rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .nav-links {
+            display: none; /* Hidden on mobile by default */
+            align-items: center;
+            gap: 1.5rem;
+        }
+        /* Mobile menu container */
+        .nav-links-mobile {
+            display: none; /* Hidden by default */
+            width: 100%;
+            flex-direction: column;
+            align-items: flex-start;
+            background-color: white;
+            padding: 0.5rem 0;
+            border-top: 1px solid var(--border-color);
+        }
+        .nav-links-mobile a {
+            padding: 0.75rem 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .nav-links a, .nav-links-mobile a {
+            color: #4b5563;
+            text-decoration: none;
+            transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            padding-bottom: 5px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-links a:hover, .nav-links a.active,
+        .nav-links-mobile a:hover, .nav-links-mobile a.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 20rem;
+            display: none; /* Hidden on mobile */
+        }
+        .search-input {
+            width: 100%;
+            background-color: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            font-size: 1rem;
+        }
+        .search-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #10b981;
+        }
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 1.25rem;
+            width: 1.25rem;
+            color: #9ca3af;
+        }
+        .mobile-menu-button {
+            display: block; /* Visible on mobile */
+            color: #4b5563;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        /* Media query for desktop view */
+        @media (min-width: 768px) {
+            .nav-links, .search-container {
+                display: flex;
+            }
+            .mobile-menu-button, .nav-links-mobile {
+                display: none !important; /* Ensure mobile menu is hidden on desktop */
+            }
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 2rem auto 0 auto; /* Adds space below the header */
+        }
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+        .input-column h2, .output-column h2 {
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .company-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .input-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.2);
+        }
+        .accordion-item {
+            border-bottom: 1px solid var(--border-color);
+        }
+        .accordion-header {
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            padding: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            position: relative;
+        }
+        .accordion-header::after {
+            content: '+';
+            position: absolute;
+            right: 1rem;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            transition: transform 0.3s ease;
+        }
+        .accordion-header.active::after {
+            transform: rotate(45deg);
+        }
+        .accordion-header:hover {
+            background-color: #e3f2fd;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            padding: 0 1rem;
+        }
+        .button-primary, .button-secondary {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .button-primary {
+            background-color: var(--accent-color);
+            color: white;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .button-primary:hover {
+            background-color: #388e3c;
+            transform: translateY(-2px);
+        }
+        .button-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        .button-secondary:hover {
+            background-color: var(--primary-color);
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            text-align: center;
+        }
+        .metric-box h4 {
+            margin: 0 0 0.5rem 0;
+            color: #555;
+        }
+        .metric-box p {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--primary-color);
+        }
+        #aiAnalysisContent ul {
+            padding-left: 20px;
+            margin-top: 0.5rem;
+        }
+        #aiAnalysisContent li {
+            margin-bottom: 0.5rem;
+        }
+        .chart-container {
+            margin-top: 2rem;
+            height: 300px;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto 0;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <nav class="main-nav">
+            <div class="nav-branding">
+                <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                </svg>                
+                <h1 class="logo-text">ESGate</h1>
+            </div>
+            <div class="nav-links">
+                <a id="analysis-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link">Home</a> 
+                <a href="{{ url_for('discover_page_user') }}">Discover</a>
+                <a id="analysis-nav-analysis-link" href="#" class="protected-nav-link active">Analysis</a> 
+                <a href="#" class="protected-nav-link">Settings</a>
+                <a href="#" class="protected-nav-link">Account </a>
+                <!-- <a href="{{ url_for('login_page') }}" class="ml-4 ...">Login / Sign Up</a> -->
+            </div>
+  
+            <button class="mobile-menu-button">
+            </button>
+            <div class="nav-links-mobile">
+                <a id="analysis-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link">Home</a> 
+                <a href="#">Discover</a>
+                <a id="analysis-nav-analysis-link-mobile" href="{{ url_for('analysis') }}" class="protected-nav-link active">Analysis</a> 
+                <a href="#" class="protected-nav-link">Settings</a>
+                <a href="#" class="protected-nav-link">Account</a>
+                <a href="{{ url_for('login_page') }}" class="block protected-nav-link">Login / Sign Up</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="dashboard-container">
+        <div class="input-column">
+            <div class="card">
+                <div class="history-card-content" style="text-align: center; padding: 2rem 1rem;">
+                    <h2 style="border: none; margin-bottom: 1rem; font-size: 2rem;">📈 Performance History</h2>
+                    <p style="color: #666; font-size: 1rem; margin: 1rem 0; line-height: 1.6;">
+                        Track your company's progress and view historical trends for<br>
+                        <strong style="color: var(--primary-color); font-size: 1.5rem;">{{ company_name | default('your company')}}</strong>
+                    </p>
+                    <button id="fetchHistoryButton" class="button-secondary" style="display: block; margin: 1.5rem auto; padding: 1rem 1.5rem;">
+                        Load Historical Data
+                    </button>
+                </div>
+            </div>
+            <div class="accordion">
+                <div class="accordion-item">
+                    <button class="accordion-header">Financial Health (Interest Rate)</button>
+                    <div class="accordion-content">
+                        <form id="interestRateForm" class="input-form">
+                            <label for="operation_years">Years in Operation</label>
+                            <input type="number" id="operation_years" placeholder="e.g., 10" class="form-input" required>
+                            
+                            <label for="revenue">Annual Revenue ($)</label>
+                            <input type="number" id="revenue" placeholder="e.g., 500000" class="form-input" required>
+                            
+                            <label for="loan_amt">Loan Amount ($)</label>
+                            <input type="number" id="loan_amt" placeholder="e.g., 75000" class="form-input" required>
+                            
+                            <label for="team_exp">Avg. Management Experience (Years)</label>
+                            <input type="number" id="team_exp" placeholder="e.g., 8" class="form-input" required>
+                            
+                            <label for="cred_hist_len">Credit History Length (Months)</label>
+                            <input type="number" id="cred_hist_len" placeholder="e.g., 120" class="form-input" required>
+                            
+                            <label for="default_hist">Number of Past Defaults</label>
+                            <input type="number" id="default_hist" placeholder="e.g., 0" class="form-input" required>
+
+                            <label for="office_own">Office Ownership Status</label>
+                            <select id="office_own" class="form-select">
+                                <option value="1">Owned</option>
+                                <option value="0">Rented</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">Risk Assessment (Default Rate)</button>
+                    <div class="accordion-content">
+                         <form id="defaultRateForm" class="input-form">
+                            <label for="annual_income">Annual Income</label>
+                            <input type="number" id="annual_income" placeholder="e.g., 120000" class="form-input">
+                            <label for="credit_score">Credit Score</label>
+                            <input type="number" id="credit_score" placeholder="e.g., 720" class="form-input">
+                            <label for="years_credit_history">Years of Credit History</label>
+                            <input type="number" id="years_credit_history" placeholder="e.g., 15" class="form-input">
+                            <label for="current_loan_amount">Current Loan Amount</label>
+                            <input type="number" id="current_loan_amount" placeholder="e.g., 25000" class="form-input">
+                            <!-- <label for="home_ownership">Home Ownership</label>
+                            <select id="home_ownership" class="form-select">
+                                <option value="Home Mortgage">Home Mortgage</option>
+                                <option value="Rent">Rent</option>
+                                <option value="Own Home">Own Home</option>
+                                <option value="Have Mortgage">Have Mortgage</option>
+                            </select> -->
+                         </form>     
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <button class="accordion-header">ESG & Sustainability Score</button>
+                    <div class="accordion-content">
+                        <form id="sustainabilityForm" class="input-form">
+                            <label for="energy_ef">Energy Efficiency (MWh/unit)</label>
+                            <input type="number" id="energy_ef" step="0.1" placeholder="e.g., 4.2" class="form-input">
+                            <label for="carbon_int">Carbon Intensity (tCO2e/unit)</label>
+                            <input type="number" id="carbon_int" step="0.1" placeholder="e.g., 0.8" class="form-input">
+                            <label for="water_usg">Water Usage (Liters/unit)</label>
+                            <input type="number" id="water_usg" placeholder="e.g., 3200" class="form-input">
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <button id="calculateButton" class="button-primary">Calculate All & Get Analysis</button>
+        </div>
+
+        <div class="output-column">
+            <div class="card" id="resultsCard">
+                <h2>Current Prediction Results</h2>
+                <div id="results-display" class="results-grid">
+                    <div class="metric-box">
+                        <h4>Interest Rate</h4>
+                        <p id="intRateResult">- %</p>
+                    </div>
+                    <div class="metric-box">
+                        <h4>Default Probability</h4>
+                        <p id="defaultRateResult">- %</p>
+                    </div>
+                    <div class="metric-box">
+                        <h4>Sustainability Score</h4>
+                        <p id="susScoreResult">- / 10</p>
+                    </div>
+                    <div class="metric-box">
+                        <h4>ESGate Score</h4>
+                        <p id="esgatescore">-/100</p>
+                    </div>
+                </div>
+                 <div id="loadingSpinner" class="spinner hidden"></div>
+            </div>
+
+            <div class="card hidden" id="aiAnalysisCard">
+                <h2>AI-Powered Analysis</h2>
+                <div id="aiAnalysisContent">
+                    <h4>Summary</h4>
+                    <p id="aiSummary">Awaiting calculation...</p>
+                    <h4>Strengths</h4>
+                    <ul id="aiStrengths"><li>-</li></ul>
+                    <h4>Weaknesses</h4>
+                    <ul id="aiWeaknesses"><li>-</li></ul>
+                    <h4>Recommendations</h4>
+                    <ul id="aiRecommendations"><li>-</li></ul>
+                </div>
+            </div>
+
+            <div class="card hidden" id="historyAnalysisCard">
+                <h2>Historical Trend Analysis</h2>
+                <div id="historyAnalysisContent">
+                    <h4>Improvement Metrics (First vs. Last Record)</h4>
+                    <p><strong>Interest Rate Change:</strong> <span id="intRateChange">-</span></p>
+                    <p><strong>Default Rate Change:</strong> <span id="defaultRateChange">-</span></p>
+                    <p><strong>Sustainability Score Change:</strong> <span id="susScoreChange">-</span></p>
+                    <p><small id="improvementMessage"></small></p> 
+                    <hr style="margin: 1rem 0; border-top: 1px solid var(--border-color);">
+                    <h4>AI Trend Commentary</h4>
+                    <p><strong>Interest Rate Trend:</strong> <span id="aiIntRateComment">Awaiting analysis...</span></p>
+                    <p><strong>Default Rate Trend:</strong> <span id="aiDefaultRateComment">Awaiting analysis...</span></p>
+                    <p><strong>Sustainability Trend:</strong> <span id="aiSusScoreComment">Awaiting analysis...</span></p>
+                    <p><strong>Overall Summary:</strong> <span id="aiOverallHistorySummary">Awaiting analysis...</span></p>
+                    <p><small id="aiHistoryError" style="color: red;"></small></p> </div>
+                <div id="historySpinner" class="spinner hidden"></div> 
+            </div>
+
+            <div class="card">
+                <h2>Historical Comparison</h2>
+                <div class="chart-container">
+                    <canvas id="interestRateChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="defaultRateChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="sustainabilityScoreChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // JavaScript for mobile menu toggle ONLY
+        document.addEventListener('DOMContentLoaded', function () {
+            const menuButton = document.querySelector('.mobile-menu-button');
+            const mobileMenu = document.querySelector('.nav-links-mobile');
+
+            menuButton.addEventListener('click', function () {
+                if (mobileMenu.style.display === 'flex') {
+                    mobileMenu.style.display = 'none';
+                } else {
+                    mobileMenu.style.display = 'flex';
+                }
+            });
+        });
+    </script>
+    <script src="{{ url_for('static', filename='user-js.js') }}"></script>
+</body>
+</html>
+

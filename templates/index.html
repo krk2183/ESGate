@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+
+<body>
+    <div class="container">
+        <form method="POST" action="/login" class="formBox" id="loginForm">
+            <h1>Welcome Back!</h1>
+            <input type="text" name="username" id="inputField" placeholder="Enter ID or Company Name" class="inputField" required>
+            <input type="password" name="password" id="passwordField" placeholder="Enter Password" class="inputField" required>
+            <div class="form-extra-options">
+                <input type="checkbox" id="rememberme" class="rememberme" name="remember">
+                <label for="rememberme">Remember me</label>
+            </div>
+            <button type="submit" id="submitButton" class="submitButton">Log in</button>
+            <h5 class="dont">Don't have an account?</h5>
+        </form>
+        
+        <a href="{{ url_for('signup_page') }}">
+            <button id="sign-up" class="sign-up">Sign up</button>
+        </a>
+        <div class="errorbox hidden" id="errorbox">
+            <h3 class="errortext">An error occurred.</h3>
+        </div>
+
+
+    </div>
+
+    
+    <script src="{{ url_for('static', filename='backend.js') }}"></script>
+</body>
+</html>

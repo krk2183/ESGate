@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESGate | Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+            color: #374151; /* text-gray-700 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        /* Style for active nav link (Professional Navy Blue) */
+        .nav-link-active {
+            color: #1e3a8a; /* text-blue-800 */
+            border-bottom: 2px solid #1e3a8a;
+            font-weight: 600;
+        }
+        .nav-link-inactive {
+            color: #4b5563; /* text-gray-600 */
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .nav-link-inactive:hover {
+            color: #1e3a8a;
+            border-bottom-color: #1e3a8a;
+        }
+        /* Accordion Icon Rotation */
+        .accordion-header.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+        /* Simple Button Styles */
+        .btn {
+            @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2;
+        }
+        .btn-primary {
+            @apply text-white bg-blue-800 hover:bg-blue-900 focus:ring-blue-700;
+        }
+        .btn-secondary {
+            @apply text-blue-800 bg-blue-100 hover:bg-blue-200 focus:ring-blue-500;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Top Navigation Bar (Professional) -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Branding -->
+                <a href="{{ url_for('user_page') }}" class="protected-nav-link flex-shrink-0 flex items-center gap-2 cursor-pointer">
+                    <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                    </svg>
+                    <span class="text-2xl font-bold text-gray-900">ESGate</span>
+                </a>
+                <!-- Desktop Links -->
+                <div class="hidden md:flex md:items-center md:space-x-1">
+                    <a id="home-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link nav-link-inactive px-3 py-2  text-sm font-medium">Home</a>
+                    <a id="home-nav-discover-link" href="{{ url_for('discover_page_user') }}" class="protected-nav-link nav-link-active px-3 py-2  text-sm font-medium">Discover</a>
+                    <a id="home-nav-analysis-link" href="{{ url_for('analysis') }}" class="protected-nav-link nav-link-inactive px-3 py-2  text-sm font-medium">Analysis</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2  text-sm font-medium">Settings</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2  text-sm font-medium">Account</a>
+                </div>
+                <!-- Profile Dropdown -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <!-- Profile Dropdown Placeholder -->
+                    <div class="relative">
+                        <button class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700 focus:outline-none ring-2 ring-offset-2 ring-transparent hover:ring-blue-700 transition">
+                            {{ username[0] | upper if username else 'U' }}
+                        </button>
+                        <!-- Dropdown menu (hidden by default)
+                        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5">
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
+                            <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                            <a href="#" id="logout-button" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Logout</a>
+                        </div>
+                        -->
+                    </div>
+                </div>
+                <!-- Mobile Menu Button -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <i id="menu-icon-open" class="fas fa-bars block h-6 w-6"></i>
+                        <i id="menu-icon-close" class="fas fa-times hidden h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+             <!-- Mobile Menu -->
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <a id="home-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link text-gray-900 bg-blue-100 block px-3 py-2 rounded-md text-base font-medium" aria-current="page">Home</a>
+                    <a id="home-nav-discover-link-mobile" href="{{ url_for('discover_page') }}" class="protected-nav-link text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Discover</a>
+                    <a id="home-nav-analysis-link-mobile" href="{{ url_for('analysis') }}" class="protected-nav-link text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Analysis</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Settings</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Account</a>
+                </div>
+                 <div class="pt-4 pb-3 border-t border-gray-200">
+                     <div class="flex items-center px-5">
+                         <div class="flex-shrink-0">
+                             <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-md font-semibold text-gray-700">
+                                 {{ username[0] | upper if username else 'U' }}
+                             </div>
+                         </div>
+                         <div class="ml-3">
+                             <div class="text-base font-medium text-gray-800">{{ username | default('SME User') }}</div>
+                         </div>
+                     </div>
+                     <div class="mt-3 px-2 space-y-1">
+                         <a href="#" class="block px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">Your Profile</a>
+                         <a href="#" id="logout-button-mobile" class="block px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">Logout</a>
+                     </div>
+                 </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pt-24"> <!-- pt-24 to offset sticky header -->
+        
+        <!-- 2. Hero / Overview Section -->
+        <section class="bg-white shadow-md rounded-lg p-6 sm:p-8 mb-8">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <!-- Left Side: Info -->
+                <div class_name="text-center md:text-left">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Welcome, {{ username | default('SME User') }}</h1>
+                    <p class="text-lg text-gray-600">Here is your ESG and Risk Snapshot.</p>
+                    <div class="mt-4 flex flex-wrap justify-center md:justify-start gap-x-6 gap-y-2">
+                        <div class="text-gray-700">
+                            <span class="block text-sm text-gray-500 uppercase tracking-wide">Sector Rank</span>
+                            <span class="text-2xl font-semibold text-blue-800">3rd <span class="text-base text-gray-600">/ 12</span></span>
+                        </div>
+                        <div class="text-gray-700">
+                            <span class="block text-sm text-gray-500 uppercase tracking-wide">Confidence</span>
+                            <span class="text-2xl font-semibold text-gray-700">&plusmn;3.5%</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Right Side: Gauge -->
+                <div class="flex-shrink-0 w-full md:w-auto text-center md:text-right">
+                    <span class="text-sm font-medium text-gray-500 uppercase tracking-wide">Aggregate ESG Score</span>
+                    <p class="text-6xl font-extrabold text-blue-800">78<span class="text-3xl text-gray-400">/100</span></p>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                        <div class="bg-green-600 h-2.5 rounded-full" style="width: 78%"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Assessment & Methodology -->
+        <section class="mb-8">
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <button id="accordion-header-methodology" class="accordion-header flex justify-between items-center w-full p-5 text-lg font-semibold text-left text-gray-800 focus:outline-none hover:bg-gray-50 transition">
+                    <div class="flex items-center">
+                        <i class="fas fa-calculator text-gray-500 text-xl mr-3"></i>
+                        <span>Assessment & Methodology</span>
+                    </div>
+                    <i class="fas fa-chevron-down text-gray-500 transform transition-transform duration-300 accordion-icon"></i>
+                </button>
+                <div id="accordion-content-methodology" class="accordion-content max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+                    <div class="px-6 pb-6 pt-2 text-gray-600 border-t border-gray-200">
+                        <p class="mb-4 mt-4">Your ESG score is a weighted composite of environmental, social, and governance metrics, benchmarked against EU standards (CSRD) and sector-specific data. Risk indicators are derived from our proprietary models and market data.</p>
+                        <ul class="list-disc list-inside space-y-1 text-sm mb-4">
+                            <li><strong>Data Sources:</strong> Self-reported, internal models, market benchmarks.</li>
+                            <li><strong>Formulas:</strong> Weighted average based on industry materiality.</li>
+                        </ul>
+                        <a href="#" class="btn btn-secondary text-sm">
+                            <i class="fas fa-file-alt mr-2"></i> View Full Methodology
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Key Metrics / Risk Indicators -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Key Metrics & Risk Indicators</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1: Default Risk -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Default Probability</h4>
+                    <p class="text-4xl font-bold text-red-700 my-2">11.2%</p>
+                    <div class="flex items-center text-sm text-green-600">
+                        <i class="fas fa-arrow-down mr-1"></i>
+                        <span>-0.5% vs last month</span>
+                    </div>
+                    <a href="#" class="text-xs text-gray-400 hover:underline mt-4 block">Source: Internal ML Model <i class="fas fa-info-circle"></i></a>
+                </div>
+                <!-- Card 2: Interest Rate -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Interest Rate Exposure</h4>
+                    <p class="text-4xl font-bold text-gray-800 my-2">5.8%</p>
+                    <div class="flex items-center text-sm text-gray-600">
+                        <i class="fas fa-minus mr-1"></i>
+                        <span>Sector Benchmark: 6.2%</span>
+                    </div>
+                    <a href="#" class="text-xs text-gray-400 hover:underline mt-4 block">Source: Market Data <i class="fas fa-info-circle"></i></a>
+                </div>
+                <!-- Card 3: Compliance -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">EU Compliance</h4>
+                    <p class="text-4xl font-bold text-green-600 my-2">Compliant</p>
+                    <div class="flex items-center text-sm text-gray-600 space-x-3">
+                        <span>CSRD: <i class="fas fa-check text-green-600"></i></span>
+                        <span>SFDR: <i class="fas fa-check text-green-600"></i></span>
+                    </div>
+                    <a href="#" class="text-xs text-gray-400 hover:underline mt-4 block">Source: EU Regulations <i class="fas fa-info-circle"></i></a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. Standardized Reporting & Export -->
+        <section class="mb-10 bg-white p-6 rounded-lg shadow-md">
+             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-900">Standardized Reporting</h3>
+                    <p class="text-gray-600 mt-1">Export your EU-compliant report for investors and stakeholders.</p>
+                </div>
+                <div class="flex-shrink-0 flex gap-3">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                    </button>
+                    <button class="btn btn-secondary">
+                        <i class="fas fa-file-csv mr-2"></i> Export as CSV
+                    </button>
+                </div>
+             </div>
+        </section>
+
+        <!-- 6. Investor Interaction Teaser -->
+        <section id="investors" class="mb-10">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Matched Investors</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Investor Card 1 -->
+                <div class="bg-white p-5 rounded-lg shadow-md flex justify-between items-center card-hover">
+                    <div>
+                        <h4 class="text-lg font-semibold text-blue-800">GreenFund Europe</h4>
+                        <p class="text-sm text-gray-600">Sector: Renewables</p>
+                        <p class="text-sm font-bold text-green-700 mt-1">85% ESG Match</p>
+                    </div>
+                    <a href="#" class="btn btn-secondary btn-sm px-3 py-1 text-xs">Request Info</a>
+                </div>
+                <!-- Investor Card 2 -->
+                <div class="bg-white p-5 rounded-lg shadow-md flex justify-between items-center card-hover">
+                    <div>
+                        <h4 class="text-lg font-semibold text-blue-800">EU Impact Partners</h4>
+                        <p class="text-sm text-gray-600">Sector: Social Enterprise</p>
+                        <p class="text-sm font-bold text-green-700 mt-1">78% ESG Match</p>
+                    </div>
+                    <a href="#" class="btn btn-secondary btn-sm px-3 py-1 text-xs">Request Info</a>
+                </div>
+                <!-- Investor Card 3 -->
+                <div class="bg-white p-5 rounded-lg shadow-md flex justify-between items-center card-hover">
+                    <div>
+                        <h4 class="text-lg font-semibold text-blue-800">Baku-Berlin Ventures</h4>
+                        <p class="text-sm text-gray-600">Sector: All</p>
+                        <p class="text-sm font-bold text-green-700 mt-1">72% ESG Match</p>
+                    </div>
+                    <a href="#" class="btn btn-secondary btn-sm px-3 py-1 text-xs">Request Info</a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 7. Footer -->
+    <footer class="bg-gray-800 text-gray-400 py-10 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+            <!-- Branding -->
+            <div class="col-span-2 md:col-span-1 mb-6 md:mb-0">
+                 <div class="flex items-center gap-2 mb-4">
+                     <svg class="h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" /></svg>
+                     <span class="text-2xl font-bold text-white">ESGate</span>
+                 </div>
+                 <p class="text-sm text-gray-500">&copy; 2025 ESGate. All rights reserved.</p>
+            </div>
+            <!-- Quick Links -->
+            <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Quick Links</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="{{ url_for('discover_page') }}" class="protected-nav-link hover:text-white hover:underline">Discover Companies</a></li>
+                     <li><a href="{{ url_for('analysis') }}" class="protected-nav-link hover:text-white hover:underline">Analysis Tool</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Investor Dashboard</a></li>
+                 </ul>
+            </div>
+             <!-- Company -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Company</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">About Us</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Contact</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">EU Regulatory References</a></li>
+                 </ul>
+            </div>
+             <!-- Legal -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Legal</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">Privacy Policy</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Terms of Service</a></li>
+                 </ul>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JS for Mobile Menu, Accordion, and Protected Links -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // --- Mobile Menu Toggle ---
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconOpen = document.getElementById('menu-icon-open');
+            const iconClose = document.getElementById('menu-icon-close');
+
+            if (menuButton && mobileMenu && iconOpen && iconClose) {
+                menuButton.addEventListener('click', function () {
+                    mobileMenu.classList.toggle('hidden');
+                    iconOpen.classList.toggle('hidden');
+                    iconClose.classList.toggle('hidden');
+                    const isExpanded = menuButton.getAttribute('aria-expanded') === 'true';
+                    menuButton.setAttribute('aria-expanded', !isExpanded);
+                });
+            }
+
+            // --- Accordion Toggle ---
+            const accordionHeader = document.getElementById('accordion-header-methodology');
+            const accordionContent = document.getElementById('accordion-content-methodology');
+            
+            if (accordionHeader && accordionContent) {
+                accordionHeader.addEventListener('click', () => {
+                    const icon = accordionHeader.querySelector('.accordion-icon');
+                    accordionHeader.classList.toggle('active');
+                    if (icon) icon.classList.toggle('rotate-180');
+
+                    if (accordionContent.style.maxHeight) {
+                        // Collapse
+                        accordionContent.style.maxHeight = null;
+                        setTimeout(() => { accordionContent.style.paddingTop = "0"; accordionContent.style.paddingBottom = "0"; }, 300);
+                    } else {
+                        // Expand
+                        accordionContent.style.paddingTop = "0.5rem"; // pt-2
+                        accordionContent.style.paddingBottom = "1.5rem"; // pb-6
+                        accordionContent.style.maxHeight = accordionContent.scrollHeight + "px";
+                    } 
+                });
+            }
+
+            // --- Protected Link Navigation (Delegated) ---
+            // This listener handles all protected links on the page
+            document.body.addEventListener('click', function(event) {
+                const protectedLink = event.target.closest('a.protected-nav-link'); 
+                if (protectedLink) {
+                    event.preventDefault(); 
+                    const url = protectedLink.getAttribute('href');
+                    if (url && url !== '#') {
+                         loadProtectedPage(url); 
+                    }
+                }
+            });
+
+            // --- loadProtectedPage Function ---
+            // This is required for the protected links to work
+            async function loadProtectedPage(url) {
+                 const token = localStorage.getItem('authToken');
+                 if (!token) {
+                     console.log("No auth token found, redirecting to login.");
+                     window.location.href = "{{ url_for('login_page') }}"; // Make sure 'login_page' is correct
+                     return;
+                 }
+                 try {
+                     const response = await fetch(url, {
+                         method: 'GET',
+                         headers: { 'Authorization': `Bearer ${token}` }
+                     });
+                     if (response.ok) {
+                         const pageHtml = await response.text();
+                         document.open(); 
+                         document.write(pageHtml);
+                         document.close();
+                     } else {
+                         console.log("Response not OK, removing token and redirecting.");
+                         localStorage.removeItem('authToken');
+                         alert('Session expired or invalid. Please log in again.');
+                         window.location.href = "{{ url_for('login_page') }}";
+                     }
+                 } catch (error) {
+                     console.error('Failed to load protected page:', error);
+                 }
+             }
+
+        }); // End DOMContentLoaded
+    </script>
+
+</body>
+</html>
+

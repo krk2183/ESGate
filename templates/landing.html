@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESGate | Empowering Azerbaijani SMEs for EU Markets</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Removed @apply, classes applied directly to <body> tag */
+            scroll-behavior: smooth; /* Keep smooth scrolling */
+        }
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Button Styles (Replaced @apply with standard CSS) */
+        .cta-button {
+            display: inline-block;
+            padding-left: 2rem; /* px-8 */
+            padding-right: 2rem; /* px-8 */
+            padding-top: 0.75rem; /* py-3 */
+            padding-bottom: 0.75rem; /* py-3 */
+            font-size: 1.125rem; /* text-lg */
+            line-height: 1.75rem;
+            font-weight: 600; /* font-semibold */
+            color: white;
+            background-color: #059669; /* bg-emerald-600 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+            transition-property: background-color, transform;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+        }
+        .cta-button:hover {
+             background-color: #047857; /* hover:bg-emerald-700 */
+             transform: scale(1.05); /* hover:scale-105 */
+        }
+        .cta-button:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px #10b981, 0 0 #0000, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* focus rings */
+        }
+
+
+        .cta-button-secondary {
+            display: inline-block;
+            padding-left: 2rem; /* px-8 */
+            padding-right: 2rem; /* px-8 */
+            padding-top: 0.75rem; /* py-3 */
+            padding-bottom: 0.75rem; /* py-3 */
+            font-size: 1.125rem; /* text-lg */
+            line-height: 1.75rem;
+            font-weight: 600; /* font-semibold */
+            color: #047857; /* text-emerald-700 */
+            background-color: white;
+            border: 1px solid #059669; /* border border-emerald-600 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* shadow-md */
+            transition-property: background-color, transform;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+        }
+         .cta-button-secondary:hover {
+             background-color: #f0fdf4; /* hover:bg-emerald-50 */
+             transform: scale(1.05); /* hover:scale-105 */
+         }
+        .cta-button-secondary:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+             box-shadow: 0 0 0 2px #10b981, 0 0 #0000, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* focus rings */
+        }
+
+        /* Consistent Section Padding (Replaced @apply with standard CSS) */
+        .section-padding {
+            padding-top: 4rem; /* py-16 */
+            padding-bottom: 4rem; /* py-16 */
+            padding-left: 1rem; /* px-4 */
+            padding-right: 1rem; /* px-4 */
+        }
+        @media (min-width: 640px) { /* sm breakpoint */
+            .section-padding {
+                padding-left: 1.5rem; /* sm:px-6 */
+                padding-right: 1.5rem; /* sm:px-6 */
+            }
+        }
+        @media (min-width: 1024px) { /* lg breakpoint */
+            .section-padding {
+                padding-top: 6rem; /* lg:py-24 */
+                padding-bottom: 6rem; /* lg:py-24 */
+                padding-left: 2rem; /* lg:px-8 */
+                padding-right: 2rem; /* lg:px-8 */
+            }
+        }
+
+        /* Placeholder Icon Style (Replaced @apply with standard CSS) */
+        .icon-placeholder {
+            width: 3rem; /* w-12 */
+            height: 3rem; /* h-12 */
+            color: #059669; /* text-emerald-600 */
+            margin-bottom: 1rem; /* mb-4 */
+            margin-left: auto; /* mx-auto */
+            margin-right: auto; /* mx-auto */
+        }
+
+         /* Style for active/inactive nav links (Replaced @apply with standard CSS) */
+        .nav-link-active {
+            color: #047857; /* text-emerald-700 */
+            border-bottom-width: 2px;
+            border-color: #059669; /* border-emerald-600 */
+        }
+        .nav-link-inactive {
+             color: #4b5563; /* text-gray-600 */
+             border-bottom-width: 2px;
+             border-color: transparent;
+             transition-property: border-color, color;
+             transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+             transition-duration: 150ms;
+        }
+        .nav-link-inactive:hover {
+             border-color: #059669; /* hover:border-emerald-600 */
+             color: #047857; /* hover:text-emerald-700 */
+        }
+
+    </style>
+</head>
+<!-- Applied body classes directly -->
+<body class="bg-gray-50 text-gray-800 antialiased">
+
+    <!-- 0. Navigation Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Branding -->
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.location.href='{{ url_for('user_page') }}'">                        <svg class="h-8 w-8 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                        </svg>
+                        <span class="text-2xl font-bold text-gray-800">ESGate</span>
+                    </div>
+                </div>
+                <!-- Desktop Links -->
+                <div class="hidden md:flex md:items-center md:space-x-6">
+                    <a href="#" id="nav-link-home" class="nav-link-active px-3 py-2  text-sm font-medium">Home</a>
+                    <a href="#overview" class="nav-link-inactive px-3 py-2  text-sm font-medium">Overview</a>
+                    <a href="#how-it-works" class="nav-link-inactive px-3 py-2  text-sm font-medium">How It Works</a>
+                    <a href="#discover" class="nav-link-inactive px-3 py-2  text-sm font-medium">Discover</a>
+                    <a href="{{ url_for('login_page') }}" class="ml-4 inline-flex items-center px-4 py-2 border rounded-md border-transparent text-sm font-medium  shadow-sm text-white bg-emerald-600 hover:bg-emerald-700">
+                        Login / Sign Up
+                    </a>
+                </div>
+                <!-- Mobile Menu Button -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <svg id="menu-icon-open" class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg id="menu-icon-close" class="hidden h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+             <!-- Mobile Menu -->
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <a href="#" id="nav-link-home-mobile" class="text-gray-800 bg-emerald-100 block px-3 py-2 rounded-md text-base font-medium" aria-current="page">Home</a>
+                    <a href="#overview" class="text-gray-600 hover:bg-gray-100 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium">Overview</a>
+                    <a href="#how-it-works" class="text-gray-600 hover:bg-gray-100 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium">How It Works</a>
+                    <a href="#discover" class="text-gray-600 hover:bg-gray-100 hover:text-gray-900 block px-3 py-2 rounded-md text-base font-medium">Discover</a>
+                </div>
+                 <div class="pt-4 pb-3 border-t border-gray-200">
+                    <div class="px-2 space-y-1">
+                        <a href="{{ url_for('login_page') }}" class="block w-full px-3 py-2 rounded-md text-center text-base font-medium text-white bg-emerald-600 hover:bg-emerald-700">Login / Sign Up</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- 1. Hero Section -->
+    <section class="bg-gradient-to-br from-emerald-100 via-teal-50 to-cyan-100 section-padding text-center">
+        <div class="max-w-3xl mx-auto">
+            <h1 class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4">
+                Empowering SMEs to Access EU Capital Markets
+            </h1>
+            <p class="text-xl md:text-2xl text-emerald-800 mb-8 font-medium">
+                Assessment, Exposure, Investment-Ready.
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-12">
+                <a href="{{ url_for('signup_page') }}" class="cta-button">Get Started (SMEs)</a>
+                <a href="#discover" class="cta-button-secondary">Discover Companies (Investors)</a>
+            </div>
+            <!-- Visuals Placeholder -->
+            <div>
+                 
+                <img src="https://placehold.co/800x400/a7f3d0/166534?text=ESG+Assessment+%26+Investment+Readiness" alt="Illustration showing SMEs, Investors, and ESG Metrics" class="mx-auto rounded-lg shadow-xl" onerror="this.src='https://placehold.co/800x400/e0e0e0/555?text=Illustration+Not+Available'">
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. Quick Overview of Platform Pillars -->
+    <section id="overview" class="bg-white section-padding">
+        <div class="max-w-7xl mx-auto text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">What ESGate Offers</h2>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto mb-12">Bridging the gap between Azerbaijani SMEs and EU investors through standardized ESG practices.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <!-- Pillar 1 -->
+                <div class="p-8 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition duration-300">
+                     <svg class="icon-placeholder" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                    <h3 class="text-xl font-semibold mb-3">Assessment & Documentation</h3>
+                    <p class="text-gray-600">Streamline ESG data collection and reporting to meet EU standards. Generate comprehensive, investor-ready documentation effortlessly.</p>
+                     <a href="#" class="mt-4 inline-block text-emerald-600 hover:text-emerald-800 font-medium">Learn More &rarr;</a>
+                </div>
+                <!-- Pillar 2 -->
+                <div class="p-8 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition duration-300">
+                     <svg class="icon-placeholder" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" /></svg>
+                    <h3 class="text-xl font-semibold mb-3">Exposure & Learning</h3>
+                    <p class="text-gray-600">Increase your visibility among targeted EU investors. Access curated resources and actionable insights to enhance your ESG performance.</p>
+                     <a href="#" class="mt-4 inline-block text-emerald-600 hover:text-emerald-800 font-medium">Learn More &rarr;</a>
+                </div>
+                <!-- Pillar 3 -->
+                <div class="p-8 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition duration-300">
+                    <svg class="icon-placeholder" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" /></svg>
+                    <h3 class="text-xl font-semibold mb-3">Investor Interaction</h3>
+                    <p class="text-gray-600">Securely connect and communicate directly with verified EU investors actively seeking sustainable opportunities in Azerbaijan.</p>
+                     <a href="#" class="mt-4 inline-block text-emerald-600 hover:text-emerald-800 font-medium">Learn More &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. SME Spotlight / Discover Section -->
+    <section id="discover" class="section-padding bg-emerald-50">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">Spotlight on Improving SMEs</h2>
+             <!-- Simple Grid Layout -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Example SME Card 1 -->
+                 <div class="bg-white rounded-lg shadow-lg overflow-hidden transition transform hover:-translate-y-2 duration-300">
+                    <img src="https://placehold.co/600x400/86efac/166534?text=Agritech+Solutions" alt="Agritech Solutions Logo" class="w-full h-48 object-cover" onerror="this.src='https://placehold.co/600x400/e0e0e0/555?text=Image+Unavailable'">
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">Agritech Solutions Baku</h3>
+                        <p class="text-sm text-gray-500 mb-3">Sector: Agriculture Technology</p>
+                        <p class="text-gray-700 mb-1">ESG Rating: <span class="font-bold text-emerald-700">8.2 / 10</span></p>
+                        <p class="text-sm text-gray-500 mb-4">Improvement: +15% (6 mo)</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                            <div class="bg-emerald-600 h-2.5 rounded-full" style="width: 82%"></div>
+                        </div>
+                        <a href="#" class="cta-button-secondary text-sm px-4 py-2">View Company Profile</a>
+                    </div>
+                </div>
+                 <!-- Example SME Card 2 -->
+                 <div class="bg-white rounded-lg shadow-lg overflow-hidden transition transform hover:-translate-y-2 duration-300">
+                    <img src="https://placehold.co/600x400/6ee7b7/166534?text=Caspian+Logistics" alt="Caspian Logistics Logo" class="w-full h-48 object-cover" onerror="this.src='https://placehold.co/600x400/e0e0e0/555?text=Image+Unavailable'">
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">Caspian Green Logistics</h3>
+                        <p class="text-sm text-gray-500 mb-3">Sector: Transportation</p>
+                        <p class="text-gray-700 mb-1">ESG Rating: <span class="font-bold text-emerald-700">6.9 / 10</span></p>
+                         <p class="text-sm text-gray-500 mb-4">Improvement: +8% (6 mo)</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                            <div class="bg-yellow-500 h-2.5 rounded-full" style="width: 69%"></div> <!-- Different color for variety -->
+                        </div>
+                        <a href="#" class="cta-button-secondary text-sm px-4 py-2">View Company Profile</a>
+                    </div>
+                </div>
+                 <!-- Example SME Card 3 -->
+                 <div class="bg-white rounded-lg shadow-lg overflow-hidden transition transform hover:-translate-y-2 duration-300">
+                    <img src="https://placehold.co/600x400/34d399/166534?text=Eco+Packaging+AZ" alt="Eco Packaging AZ Logo" class="w-full h-48 object-cover" onerror="this.src='https://placehold.co/600x400/e0e0e0/555?text=Image+Unavailable'">
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold mb-2">Eco Packaging AZ</h3>
+                        <p class="text-sm text-gray-500 mb-3">Sector: Manufacturing</p>
+                        <p class="text-gray-700 mb-1">ESG Rating: <span class="font-bold text-emerald-700">7.5 / 10</span></p>
+                         <p class="text-sm text-gray-500 mb-4">Improvement: +12% (6 mo)</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                            <div class="bg-emerald-600 h-2.5 rounded-full" style="width: 75%"></div>
+                        </div>
+                        <a href="#" class="cta-button-secondary text-sm px-4 py-2">View Company Profile</a>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-10">
+                 <a href="#investor-access" class="cta-button">Explore All Companies</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Investor Access Section -->
+    <section id="investor-access" class="bg-white section-padding">
+        <div class="max-w-7xl mx-auto text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4">Access Sustainable Investments in Azerbaijan</h2>
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto mb-10">Discover verified SMEs committed to ESG principles and ready for growth.</p>
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12 text-center">
+                <div>
+                    <span class="block text-4xl font-bold text-emerald-600">50+</span>
+                    <span class="text-gray-600">Verified SMEs</span>
+                </div>
+                 <div>
+                    <span class="block text-4xl font-bold text-emerald-600">6.8</span>
+                    <span class="text-gray-600">Average ESG Score</span>
+                </div>
+                 <div>
+                    <span class="block text-4xl font-bold text-emerald-600">12+</span>
+                    <span class="text-gray-600">Sectors Represented</span>
+                </div>
+            </div>
+             <!-- Search/Filter Placeholder -->
+             <div class="max-w-2xl mx-auto mb-8">
+                 <label for="investor-search" class="sr-only">Search Companies</label>
+                 <div class="relative">
+                     <input type="search" id="investor-search" placeholder="Search by sector, rating, or name..." class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-lg">
+                     <button class="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700">
+                         <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                     </button>
+                 </div>
+                 <!-- Add filter dropdowns here if needed -->
+             </div>
+             <a href="#" class="cta-button">Explore Companies Now</a> <!-- Link to investor dashboard -->
+        </div>
+    </section>
+
+     <!-- 5. Why ESGate Section / Pain Points -->
+    <section class="section-padding bg-gray-100">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+                 
+                 <img src="https://placehold.co/600x400/cbd5e1/1e3a8a?text=Market+Access+Gap" alt="Graph showing investment gap" class="rounded-lg shadow-lg mb-8 md:mb-0" onerror="this.src='https://placehold.co/600x400/e0e0e0/555?text=Graph+Not+Available'">
+            </div>
+            <div>
+                <h2 class="text-3xl font-bold text-gray-900 mb-4">The Challenge for Azerbaijani SMEs</h2>
+                <p class="text-lg text-gray-600 mb-6">Accessing lucrative EU capital markets requires robust Environmental, Social, and Governance (ESG) documentation – a significant hurdle for many growing businesses in Azerbaijan.</p>
+                <ul class="space-y-3 text-gray-700 mb-6">
+                    <li class="flex items-start">
+                        <svg class="w-6 h-6 text-red-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span><strong class="font-semibold">Lack of Standardization:</strong> Difficulty meeting diverse EU investor requirements.</span>
+                    </li>
+                     <li class="flex items-start">
+                        <svg class="w-6 h-6 text-red-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span><strong class="font-semibold">Limited Resources:</strong> SMEs often lack dedicated teams for complex ESG reporting.</span>
+                    </li>
+                     <li class="flex items-start">
+                        <svg class="w-6 h-6 text-red-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span><strong class="font-semibold">Missed Opportunities:</strong> Inability to attract sustainability-focused EU investment.</span>
+                    </li>
+                </ul>
+                <p class="text-lg text-emerald-800 font-semibold">ESGate provides the tools and visibility to overcome these challenges.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. How It Works / Step-by-Step Guide -->
+    <section id="how-it-works" class="bg-white section-padding">
+        <div class="max-w-7xl mx-auto text-center">
+            <h2 class="text-3xl font-bold text-gray-900 mb-12">Get Started in 4 Simple Steps</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-10 relative">
+                 <!-- Connecting Lines (Desktop only) -->
+                 <div class="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200" style="transform: translateY(-20px);"></div> <!-- Adjust vertical position -->
+                
+                <!-- Step 1 -->
+                <div class="relative p-6 text-center z-10">
+                     <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-2xl font-bold mb-4 mx-auto border-4 border-white shadow-md">1</div>
+                    <svg class="icon-placeholder" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
+                    <h3 class="text-lg font-semibold mb-2">Assess & Submit</h3>
+                    <p class="text-gray-600 text-sm">Use our platform to easily input your company's ESG data.</p>
+                </div>
+                <!-- Step 2 -->
+                 <div class="relative p-6 text-center z-10">
+                     <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-2xl font-bold mb-4 mx-auto border-4 border-white shadow-md">2</div>
+                    <svg class="icon-placeholder" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 1 0 7.5 7.5h-7.5V6Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0 0 13.5 3v7.5Z" /></svg>
+                    <h3 class="text-lg font-semibold mb-2">Improve & Document</h3>
+                    <p class="text-gray-600 text-sm">Receive actionable insights and generate standardized ESG reports.</p>
+                </div>
+                <!-- Step 3 -->
+                <div class="relative p-6 text-center z-10">
+                     <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-2xl font-bold mb-4 mx-auto border-4 border-white shadow-md">3</div>
+                     <svg class="icon-placeholder" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                    <h3 class="text-lg font-semibold mb-2">Get Discovered</h3>
+                    <p class="text-gray-600 text-sm">Your verified profile appears in our exclusive investor dashboard.</p>
+                </div>
+                <!-- Step 4 -->
+                <div class="relative p-6 text-center z-10">
+                     <div class="w-16 h-16 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-2xl font-bold mb-4 mx-auto border-4 border-white shadow-md">4</div>
+                    <svg class="icon-placeholder" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-2.138a1.125 1.125 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" /></svg>
+                    <h3 class="text-lg font-semibold mb-2">Connect & Grow</h3>
+                    <p class="text-gray-600 text-sm">Engage with interested EU investors and secure funding.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. Testimonials / Social Proof -->
+    <section class="section-padding bg-emerald-50">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-900 mb-12">Success Stories</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                <!-- Stats -->
+                <div class="text-center md:text-left">
+                     <h3 class="text-2xl font-semibold text-gray-800 mb-6">Real Results for Azerbaijani SMEs</h3>
+                     <div class="space-y-4">
+                         <div class="flex items-center justify-center md:justify-start">
+                             <span class="text-4xl font-bold text-emerald-600 mr-3">35+</span>
+                             <span class="text-gray-600 text-lg">SMEs Improved ESG Scores</span>
+                         </div>
+                         <div class="flex items-center justify-center md:justify-start">
+                             <span class="text-4xl font-bold text-emerald-600 mr-3">15+</span>
+                             <span class="text-gray-600 text-lg">Investor Connections Made</span>
+                         </div>
+                          <div class="flex items-center justify-center md:justify-start">
+                             <span class="text-4xl font-bold text-emerald-600 mr-3">20%</span>
+                             <span class="text-gray-600 text-lg">Avg. Score Improvement</span>
+                         </div>
+                     </div>
+                     <!-- Optional Partner Logos -->
+                      <div class="mt-8">
+                         <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 text-center md:text-left">Trusted By</h4>
+                         <div class="flex justify-center md:justify-start space-x-6 opacity-60">
+                               
+                             <span class="text-gray-400">Logo 1</span>
+                             <span class="text-gray-400">Logo 2</span>
+                             <span class="text-gray-400">Logo 3</span>
+                         </div>
+                     </div>
+                </div>
+                <!-- Quote -->
+                <div class="bg-white p-8 rounded-lg shadow-lg relative">
+                     <svg class="absolute top-4 left-4 w-10 h-10 text-emerald-200" fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M9.333 8c-1.841 0-3.333 1.492-3.333 3.333v8c0 1.841 1.492 3.333 3.333 3.333h4L16 26.667V22.667h1.333c1.841 0 3.333-1.492 3.333-3.333v-8c0-1.841-1.492-3.333-3.333-3.333H9.333zm13.334 0c-1.841 0-3.333 1.492-3.333 3.333v8c0 1.841 1.492 3.333 3.333 3.333h4L29.333 26.667V22.667h1.334c1.841 0 3.333-1.492 3.333-3.333v-8c0-1.841-1.492-3.333-3.333-3.333H22.667z"></path></svg>
+                     <p class="text-lg text-gray-700 italic relative z-10">"ESGate made the complex ESG process manageable. We received clear guidance, improved our score significantly, and are now in talks with two potential EU investors we met through the platform!"</p>
+                     <p class="mt-4 font-semibold text-gray-800">- Fatima Aliyeva, CEO of Baku Sustainable Textiles</p>
+                     <p class="text-sm text-gray-500">Baku, Azerbaijan</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8. CTA & Signup / Login Section -->
+    <section class="section-padding bg-emerald-600 text-white text-center">
+        <div class="max-w-4xl mx-auto">
+             <h2 class="text-3xl md:text-4xl font-bold mb-6">Ready to Unlock Growth Opportunities?</h2>
+             <p class="text-lg text-emerald-100 mb-10">Join ESGate today and connect with the future of sustainable investment.</p>
+             <div class="flex flex-col sm:flex-row justify-center gap-6">
+                 <a href="{{ url_for('signup_page') }}" class="cta-button bg-white text-emerald-700 hover:bg-emerald-50">Sign Up My SME</a>
+                 <a href="#" class="cta-button-secondary bg-transparent text-white border-white hover:bg-white hover:text-emerald-700">Explore as Investor</a>
+             </div>
+              <p class="mt-6 text-emerald-200 text-sm">
+                  <a href="#" class="hover:underline">Request a Demo</a> or <a href="#discover" class="hover:underline">Explore Companies</a> without signing up.
+              </p>
+        </div>
+    </section>
+
+    <!-- 9. Footer -->
+    <footer class="bg-gray-800 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8">
+            <!-- Branding -->
+            <div class="col-span-2 md:col-span-4 lg:col-span-1 mb-6 lg:mb-0">
+                 <div class="flex items-center gap-2 mb-4">
+                     <svg class="h-8 w-8 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" /></svg>
+                     <span class="text-2xl font-bold text-white">ESGate</span>
+                 </div>
+                 <p class="text-sm text-gray-400">Connecting Azerbaijani SMEs with EU Capital Markets through ESG.</p>
+                 <div class="flex space-x-4 mt-4">
+                     <a href="#" class="text-gray-400 hover:text-white">X</a>
+                     <a href="#" class="text-gray-400 hover:text-white">LN</a>
+                     <a href="#" class="text-gray-400 hover:text-white">FB</a>
+                 </div>
+            </div>
+            <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Quick Links</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#discover" class="hover:text-white hover:underline">Discover Companies</a></li>
+                     <li><a href="{{ url_for('signup_page') }}" class="hover:text-white hover:underline">Submit SME</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Investor Dashboard</a></li>
+                     <li><a href="#how-it-works" class="hover:text-white hover:underline">How It Works</a></li>
+                 </ul>
+            </div>
+             <!-- Resources -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Resources</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">Blog</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">ESG Guides</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">FAQ</a></li>
+                 </ul>
+            </div>
+             <!-- Company -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Company</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">About Us</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Contact</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Careers</a></li>
+                 </ul>
+            </div>
+             <!-- Legal -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Legal</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">Privacy Policy</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Terms of Service</a></li>
+                 </ul>
+            </div>
+        </div>
+        <div class="mt-8 pt-8 border-t border-gray-700 text-center text-sm text-gray-400">
+            &copy; 2025 ESGate. All rights reserved. Made by krk2183.
+        </div>
+    </footer>
+
+    <!-- JavaScript for Mobile Menu and Protected Links -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Mobile Menu Toggle
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const iconOpen = document.getElementById('menu-icon-open');
+            const iconClose = document.getElementById('menu-icon-close');
+
+            if (menuButton && mobileMenu && iconOpen && iconClose) {
+                menuButton.addEventListener('click', function () {
+                    mobileMenu.classList.toggle('hidden');
+                    iconOpen.classList.toggle('hidden');
+                    iconClose.classList.toggle('hidden');
+                    const isExpanded = menuButton.getAttribute('aria-expanded') === 'true';
+                    menuButton.setAttribute('aria-expanded', !isExpanded);
+                });
+            }
+
+            // Protected Link Handling
+             const protectedLinkIds = [
+                 'nav-link-home', 'nav-link-home-mobile',
+                 'nav-link-analysis', 'nav-link-analysis-mobile'
+                 // Add IDs of other protected links here (e.g., 'nav-link-settings')
+             ];
+
+             function handleProtectedLinkClick(event) {
+                 event.preventDefault(); 
+                 const url = event.target.closest('a').getAttribute('href'); // Get href from the link itself
+                 if (url) {
+                    // Make sure loadProtectedPage is defined before calling
+                    if (typeof loadProtectedPage === 'function') {
+                         loadProtectedPage(url); 
+                    } else {
+                         console.warn('loadProtectedPage function not found. Standard navigation fallback.');
+                         window.location.href = url; 
+                    }
+                 }
+             }
+
+             protectedLinkIds.forEach(id => {
+                 const linkElement = document.getElementById(id);
+                 if (linkElement) {
+                     linkElement.addEventListener('click', handleProtectedLinkClick);
+                 }
+             });
+
+            // Definition for loadProtectedPage (Keep this if 'user-js.js' is not loaded on this page)
+            // If 'user-js.js' IS loaded, you can potentially remove this definition 
+            // and rely on the one in 'user-js.js', but ensure that file loads *before* this script runs.
+            async function loadProtectedPage(url) {
+                 const token = localStorage.getItem('authToken');
+                 if (!token) {
+                     console.log("No auth token found, redirecting to login.");
+                     window.location.href = '/login'; // Redirect to login page ('/' route)
+                     return;
+                 }
+                 console.log(`Attempting to load protected page: ${url}`);
+                 try {
+                     const response = await fetch(url, {
+                         method: 'GET',
+                         headers: { 'Authorization': `Bearer ${token}` }
+                     });
+                     console.log(`Fetch response status: ${response.status}`);
+                     if (response.ok) {
+                         const pageHtml = await response.text();
+                         console.log("Replacing document content...");
+                         document.open(); 
+                         document.write(pageHtml);
+                         document.close();
+                         console.log("Document content replaced.");
+                     } else {
+                         console.log("Response not OK, removing token and redirecting.");
+                         localStorage.removeItem('authToken');
+                         alert('Session expired or invalid. Please log in again.');
+                         window.location.href = '/login'; // Redirect to login page ('/' route)
+                     }
+                 } catch (error) {
+                     console.error('Failed to load protected page:', error);
+                     alert('An error occurred loading the page. Please check console.');
+                 }
+             }
+        });
+    </script>
+    <script src="{{ url_for('static', filename='user-js.js') }}"></script>
+
+</body>
+</html>
+
