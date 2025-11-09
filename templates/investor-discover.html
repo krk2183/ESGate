@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESGate | Discover SMEs</title>
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts (Inter) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='investor.css')}}">
     
@@ -19,11 +16,9 @@
 </head>
 <body class="bg-gray-100">
 
-    <!-- 1. Top Navigation Bar (Professional) -->
     <header class="bg-white shadow-sm sticky top-0 z-50">
         <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
-                <!-- Branding -->
                 <a href="{{ url_for('user_page') }}" class="protected-nav-link flex-shrink-0 flex items-center gap-2 cursor-pointer" aria-label="ESGate Home">
                     <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
@@ -31,30 +26,21 @@
                     <span class="text-2xl font-bold text-gray-900">ESGate</span>
                 </a>
                 
-                <!-- Desktop Links -->
                 <div class="hidden md:flex md:items-center md:space-x-1">
-                    <!-- 
-                    FIX:
-                    - 'rounded-md' REMOVED from all links.
-                    - 'nav-link-active' MOVED to "Home".
-                    - 'nav-link-inactive' ADDED to "Discover".
-                    -->
                     <a id="discover-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Home</a>
                     <a id="discover-nav-discover-link" href="{{ url_for('discover_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-active">Discover</a>
-                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Settings</a>
+                    <a href="{{url_for('settings_page')}}" class="nav-link-inactive px-3 py-2 text-sm font-medium">Settings</a>
                     <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Account</a>
                 </div>
                 
-                <!-- Profile Dropdown (Unchanged) -->
                 <div class="hidden md:flex items-center space-x-4">
                     <div class="relative">
                         <button class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700 focus:outline-none ring-2 ring-offset-2 ring-transparent hover:ring-blue-700 transition" aria-label="User menu">
-                            {{ username[0] | upper if username else 'I' }}
+                            {{ username[0] | upper if username else 'N' }}
                         </button>
                     </div>
                 </div>
                 
-                <!-- Mobile Menu Button (Unchanged) -->
                 <div class="-mr-2 flex md:hidden">
                     <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
                         <span class="sr-only">Open main menu</span>
@@ -64,36 +50,24 @@
                 </div>
             </div>
 
-            <!-- Mobile Menu (FIXED) -->
             <div class="md:hidden hidden" id="mobile-menu">
                 <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                    <!-- 
-                    FIX:
-                    - 'active' classes (bg-blue-100) MOVED to "Home".
-                    - 'active' classes REMOVED from "Discover".
-                    -->
                     <a id="discover-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-900 bg-blue-100" aria-current="page">Home</a>
                     <a id="discover-nav-discover-link-mobile" href="{{ url_for('discover_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Discover</a>
                     <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Settings</a>
                     <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Account</a>
                 </div>
                 <div class="pt-4 pb-3 border-t border-gray-200">
-                    <!-- ... (mobile profile section - unchanged) ... -->
-                </div>
+                    </div>
             </div>
         </nav>
     </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pt-24"> <!-- pt-24 to offset sticky header -->
-
-        <!-- Header Section -->
-        <section class="mb-6">
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pt-24"> <section class="mb-6">
             <h1 class="text-3xl font-bold text-gray-900">Investment Opportunities</h1>
             <p class="text-lg text-gray-600">Azerbaijan SME Market</p>
         </section>
 
-        <!-- Filter Bar -->
         <section class="mb-6 p-4 bg-white rounded-lg shadow-sm">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div>
@@ -141,14 +115,11 @@
             </div>
         </section>
 
-        <!-- Main Content Area (Table + Filter Sidebar) -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             
-            <!-- Filter Sidebar -->
             <aside class="lg:col-span-1 bg-white p-6 rounded-lg shadow-sm h-fit sticky top-24">
                 <h3 class="text-lg font-semibold text-gray-900 border-b pb-3 mb-4">Detailed Filters</h3>
                 
-                <!-- Compliance Filter -->
                 <div class="mb-6">
                     <h4 class="font-medium text-gray-700 mb-2">Compliance Status</h4>
                     <div class="space-y-2">
@@ -163,32 +134,61 @@
                     </div>
                 </div>
 
-                <!-- Financials Filter -->
                 <div class="mb-6">
                     <h4 class="font-medium text-gray-700 mb-2">Financials</h4>
                     <div class="space-y-2">
-                         <label for="filter-revenue" class="block text-xs font-medium text-gray-500">Min. Revenue</label>
-                         <select id="filter-revenue" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Revenue">
-                             <option>Any</option>
-                             <option>$100,000+</option>
-                             <option>$500,000+</option>
-                             <option>$1,000,000+</option>
-                         </select>
+                           <label for="filter-revenue" class="block text-xs font-medium text-gray-500">Min. Revenue</label>
+                           <select id="filter-revenue" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Revenue">
+                               <option>Any</option>
+                               <option>$100,000+</option>
+                               <option>$500,000+</option>
+                               <option>$1,000,000+</option>
+                           </select>
                     </div>
-                     <div class="space-y-2 mt-2">
-                         <label for="filter-employees" class="block text-xs font-medium text-gray-500">Min. Employees</label>
-                         <select id="filter-employees" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Employees">
-                             <option>Any</option>
-                             <option>10+</option>
-                             <option>50+</option>
-                             <option>100+</option>
-                         </select>
+                      <div class="space-y-2 mt-2">
+                           <label for="filter-employees" class="block text-xs font-medium text-gray-500">Min. Employees</label>
+                           <select id="filter-employees" class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm" aria-label="Filter by Minimum Employees">
+                               <option>Any</option>
+                               <option>10+</option>
+                               <option>50+</option>
+                               <option>100+</option>
+                           </select>
                     </div>
                 </div>
             </aside>
 
-            <!-- Company List View -->
             <div class="lg:col-span-3">
+
+                <section id="company-spotlight" class="mb-6 p-6 bg-blue-50 border-l-4 border-blue-700 rounded-lg shadow-md hidden">
+                    <h2 id="spotlight-company-name" class="text-2xl font-bold text-gray-900 mb-2">Agritech Solutions Baku</h2>
+                    <p class="text-gray-700 mb-4">
+                        Agritech Solutions Baku is a leading Azerbaijani SME focused on developing sustainable, high-efficiency farming technology. Their dedication to reducing water consumption and improving labor practices sets them apart as a prime **ESG investment target** in the region.
+                    </p>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-3">Key Achievements</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center space-x-3">
+                            <i class="fas fa-seedling text-3xl text-green-600"></i>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Environmental</p>
+                                <p class="font-bold text-gray-900">1st in Water Efficiency</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center space-x-3">
+                            <i class="fas fa-handshake text-3xl text-blue-600"></i>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Social</p>
+                                <p class="font-bold text-gray-900">Fair Labor Certified</p>
+                            </div>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg shadow flex items-center space-x-3">
+                            <i class="fas fa-chart-line text-3xl text-purple-600"></i>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Growth</p>
+                                <p class="font-bold text-gray-900">200% Revenue Growth</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
                 <div class="flex justify-between items-center mb-4">
                     <span class="text-sm text-gray-600">Showing 1-10 of 42 companies</span>
                     <div>
@@ -201,7 +201,6 @@
                     </div>
                 </div>
 
-                <!-- Table -->
                 <div class="bg-white shadow-md rounded-lg overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200 data-table">
@@ -217,8 +216,7 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <!-- Row 1: High Score (Expandable) -->
-                                <tr class="expandable-row" data-target-id="details-1" aria-expanded="false" aria-controls="details-1">
+                                <tr id="agritech-row" class="expandable-row cursor-pointer hover:bg-blue-50 transition duration-150 ease-in-out" data-target-id="details-1" aria-expanded="false" aria-controls="details-1" data-company-name="Agritech Solutions Baku">
                                     <td class="font-medium text-blue-800">Agritech Solutions Baku</td>
                                     <td>Agriculture</td>
                                     <td class="score-green font-mono">82 / 100</td>
@@ -227,7 +225,6 @@
                                     <td><span class="flex items-center score-green"><i class="fas fa-check-circle mr-2"></i>CSRD</span></td>
                                     <td class="font-mono">2 days ago</td>
                                 </tr>
-                                <!-- Expanded Panel 1 -->
                                 <tr id="details-1" class="hidden">
                                     <td colspan="7" class="p-6 expanded-panel">
                                         <h4 class="text-md font-semibold text-gray-800 mb-4">Detailed Metrics: Agritech Solutions Baku</h4>
@@ -250,8 +247,7 @@
                                     </td>
                                 </tr>
 
-                                <!-- Row 2: Mid Score -->
-                                <tr class="expandable-row" data-target-id="details-2" aria-expanded="false" aria-controls="details-2">
+                                <tr class="expandable-row cursor-pointer hover:bg-blue-50 transition duration-150 ease-in-out" data-target-id="details-2" aria-expanded="false" aria-controls="details-2" data-company-name="Caspian Green Logistics">
                                     <td class="font-medium text-blue-800">Caspian Green Logistics</td>
                                     <td>Transportation</td>
                                     <td class="score-yellow font-mono">69 / 100</td>
@@ -260,13 +256,11 @@
                                     <td><span class="flex items-center score-yellow"><i class="fas fa-exclamation-triangle mr-2"></i>SFDR Aligned</span></td>
                                     <td class="font-mono">5 days ago</td>
                                 </tr>
-                                <!-- Expanded Panel 2 -->
                                 <tr id="details-2" class="hidden">
                                     <td colspan="7" class="p-6 expanded-panel">... Detailed panel for Caspian Green Logistics ...</td>
                                 </tr>
                                 
-                                <!-- Row 3: Low Score -->
-                                <tr class="expandable-row" data-target-id="details-3" aria-expanded="false" aria-controls="details-3">
+                                <tr class="expandable-row cursor-pointer hover:bg-blue-50 transition duration-150 ease-in-out" data-target-id="details-3" aria-expanded="false" aria-controls="details-3" data-company-name="Baku Fabrix">
                                     <td class="font-medium text-blue-800">Baku Fabrix</td>
                                     <td>Manufacturing</td>
                                     <td class="score-red font-mono">42 / 100</td>
@@ -275,7 +269,6 @@
                                     <td><span class="flex items-center score-red"><i class="fas fa-times-circle mr-2"></i>Non-Compliant</span></td>
                                     <td class="font-mono">1 day ago</td>
                                 </tr>
-                                <!-- Expanded Panel 3 -->
                                 <tr id="details-3" class="hidden">
                                     <td colspan="7" class="p-6 expanded-panel">... Detailed panel for Baku Fabrix ...</td>
                                 </tr>
@@ -285,9 +278,6 @@
                     </div>
                 </div>
                 
-                <!-- New Sections Added Here -->
-                
-                <!-- Spotlight Section -->
                 <section id="spotlight" class="mt-12">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Spotlight: Noteworthy Compliance</h2>
                     <div class="bg-white p-6 rounded-lg shadow-sm">
@@ -311,7 +301,6 @@
                     </div>
                 </section>
                 
-                <!-- Detailed Comparison Tool -->
                 <section id="comparison-tool" class="mt-12">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Detailed Comparison Tool</h2>
                     <div class="bg-white p-6 rounded-lg shadow-sm">
@@ -342,7 +331,6 @@
                     </div>
                 </section>
                 
-                <!-- Auto Investor Matching -->
                 <section id="investor-matching" class="mt-12">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Auto-Matched Investors</h2>
                     <div class="bg-white shadow-md rounded-lg overflow-hidden">
@@ -373,7 +361,6 @@
                     </div>
                 </section>
                 
-                <!-- Methodology Section -->
                 <section id="methodology" class="mt-12">
                     <h2 class="text-2xl font-bold text-gray-800 mb-4">Methodology & Documentation</h2>
                     <div class="bg-white rounded-lg shadow-md overflow-hidden">
@@ -400,10 +387,8 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="bg-gray-800 text-gray-400 py-10 px-4 sm:px-6 lg:px-8 mt-16">
         <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-            <!-- Branding -->
             <div class="col-span-2 md:col-span-1 mb-6 md:mb-0">
                  <div class="flex items-center gap-2 mb-4">
                      <svg class="h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" /></svg>
@@ -411,7 +396,6 @@
                  </div>
                  <p class="text-sm text-gray-500">&copy; 2025 ESGate. All rights reserved.</p>
             </div>
-            <!-- Quick Links -->
             <div>
                  <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Quick Links</h4>
                  <ul class="space-y-2 text-sm">
@@ -419,7 +403,6 @@
                      <li><a href="{{ url_for('analysis') }}" class="protected-nav-link hover:text-white hover:underline">Analysis Tool</a></li>
                  </ul>
             </div>
-             <!-- Company -->
              <div>
                  <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Company</h4>
                  <ul class="space-y-2 text-sm">
@@ -427,24 +410,72 @@
                      <li><a href="#" class="hover:text-white hover:underline">Contact</a></li>
                      <li><a href="#" class="hover:text-white hover:underline">EU Regulatory References</a></li>
                  </ul>
-            </div>
-             <!-- Legal -->
+             </div>
              <div>
                  <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Legal</h4>
                  <ul class="space-y-2 text-sm">
                      <li><a href="#" class="hover:text-white hover:underline">Privacy Policy</a></li>
                      <li><a href="#" class="hover:text-white hover:underline">Terms of Service</a></li>
                  </ul>
-            </div>
+             </div>
         </div>
     </footer>
 
-    <!-- JS for Mobile Menu, Protected Links, and Accordions -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script src="{{ url_for('static', filename='user-js.js') }}"></script>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const agritechRow = document.getElementById('agritech-row');
+            const spotlightSection = document.getElementById('company-spotlight');
 
-</body>
+            if (agritechRow) {
+                agritechRow.addEventListener('click', function(e) {
+                    // Prevent default action if it was a link or something else, but let the original
+                    // expandable row logic run (which we assume is in user-js.js or handled by data-attributes).
+
+                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                    const targetId = this.getAttribute('data-target-id');
+                    const targetRow = document.getElementById(targetId);
+                    
+                    // Logic to handle the spotlight: Only show the spotlight for Agritech
+                    if (this.dataset.companyName === 'Agritech Solutions Baku') {
+                        // Toggle logic for the spotlight section
+                        if (!isExpanded) {
+                            // If the row is about to be expanded, show the spotlight
+                            spotlightSection.classList.remove('hidden');
+                        } else {
+                            // If the row is about to be collapsed, hide the spotlight
+                            spotlightSection.classList.add('hidden');
+                        }
+                    } else {
+                        // For other rows, ensure the Agritech spotlight is hidden
+                        spotlightSection.classList.add('hidden');
+                    }
+                    
+                    // --- Original expandable row logic (simplified manual toggle) ---
+                    // This is added here in case your user-js.js is not loaded or doesn't handle the toggle.
+                    // If your user-js.js handles all expandable-row logic, you can remove this block.
+                    if (targetRow) {
+                        if (isExpanded) {
+                             targetRow.classList.add('hidden');
+                             this.setAttribute('aria-expanded', 'false');
+                        } else {
+                             // Hide all other detailed panels first (best practice)
+                             document.querySelectorAll('.expanded-panel').forEach(panel => {
+                                 panel.parentElement.classList.add('hidden');
+                                 panel.parentElement.previousElementSibling.setAttribute('aria-expanded', 'false');
+                             });
+                             targetRow.classList.remove('hidden');
+                             this.setAttribute('aria-expanded', 'true');
+                        }
+                    }
+                    // -----------------------------------------------------------------
+
+                });
+            }
+        });
+    </script>
+    </body>
 </html>
-

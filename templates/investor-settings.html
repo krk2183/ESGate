@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+                /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* bg-gray-100 */
+            color: #374151; /* text-gray-700 */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        /* Professional color palette */
+        :root {
+            --color-primary: #1e3a8a; /* Corporate Blue (blue-800) */
+            --color-primary-light: #dbeafe; /* blue-100 */
+            --color-text-primary: #111827; /* gray-900 */
+            --color-text-secondary: #4b5563; /* gray-600 */
+            --color-text-muted: #9ca3af; /* gray-400 */
+            --color-border: #e5e7eb; /* gray-200 */
+            --color-risk-high: #dc2626; /* red-600 */
+            --color-risk-low: #059669; /* green-600 */
+        }
+        
+        /* Style for active nav link */
+        .nav-link-active {
+            color: var(--color-primary);
+            border-bottom: 2px solid var(--color-primary);
+            font-weight: 600;
+        }
+        .nav-link-inactive {
+            color: var(--color-text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s ease, border-color 0.2s ease;
+        }
+        .nav-link-inactive:hover {
+            color: var(--color-primary);
+            text-decoration: none; /* No underline on hover, just border */
+        }
+        
+        /* Table styles */
+        .data-table th {
+            padding: 0.75rem 1.5rem; /* py-3 px-6 */
+            text-align: left;
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600; /* font-semibold */
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em; /* tracking-wider */
+            background-color: #f9fafb; /* bg-gray-50 */
+            border-bottom: 2px solid var(--color-border);
+        }
+        .data-table td {
+            padding: 1rem 1.5rem; /* py-4 px-6 */
+            white-space: nowrap;
+            font-size: 0.875rem; /* text-sm */
+            color: var(--color-text-primary);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .data-table tbody tr.expandable-row {
+            transition: background-color 0.2s ease;
+        }
+        .data-table tbody tr.expandable-row:hover {
+            background-color: #fbfcfe; /* very light blue */
+            cursor: pointer;
+        }
+        .expanded-panel {
+            background-color: #f9fafb; /* bg-gray-50 */
+        }
+        
+        /* Muted Color Coding */
+        .score-low-risk {
+            color: var(--color-risk-low);
+            font-weight: 500;
+        }
+        .score-high-risk {
+            color: var(--color-risk-high);
+            font-weight: 500;
+        }
+        
+        /* Monospace font for numbers */
+        .font-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+        
+        /* Accordion Icon Rotation */
+        .accordion-header.active .accordion-icon {
+            transform: rotate(180deg);
+        }
+        
+        /* Professional Button Styles */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding-left: 1rem; padding-right: 1rem; /* px-4 */
+            padding-top: 0.5rem; padding-bottom: 0.5rem; /* py-2 */
+            border: 1px solid transparent;
+            font-size: 0.875rem; /* text-sm */
+            font-weight: 500; /* font-medium */
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); /* shadow-sm */
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+            cursor: pointer;
+        }
+        .btn:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            box-shadow: 0 0 0 2px var(--color-primary-light), 0 1px 2px 0 rgb(0 0 0 / 0.05); /* focus:ring-blue-200 */
+        }
+        .btn-primary {
+            color: white;
+            background-color: var(--color-primary);
+            border-color: var(--color-primary);
+        }
+        .btn-primary:hover {
+            background-color: #1e40af; /* hover:bg-blue-700 */
+        }
+        .btn-secondary {
+            color: var(--color-primary);
+            background-color: var(--color-primary-light);
+            border-color: #bfdbfe; /* border-blue-200 */
+        }
+        .btn-secondary:hover {
+            background-color: #bfdbfe; /* hover:bg-blue-200 */
+        }
+        .btn-outline {
+            color: #374151; /* text-gray-700 */
+            background-color: white;
+            border-color: var(--color-border);
+        }
+        .btn-outline:hover {
+            background-color: #f9fafb; /* hover:bg-gray-50 */
+        }
+    </style>
+    <title>Document</title>
+</head>
+<body>
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Branding -->
+                <a href="{{ url_for('user_page') }}" class="protected-nav-link flex-shrink-0 flex items-center gap-2 cursor-pointer" aria-label="ESGate Home">
+                    <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                    </svg>
+                    <span class="text-2xl font-bold text-gray-900">ESGate</span>
+                </a>
+                
+                <!-- Desktop Links -->
+                <div class="hidden md:flex md:items-center md:space-x-1">
+                    <!-- 
+                    FIX:
+                    - 'rounded-md' REMOVED from all links.
+                    - 'nav-link-active' MOVED to "Home".
+                    - 'nav-link-inactive' ADDED to "Discover".
+                    -->
+                    <a id="discover-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Home</a>
+                    <a id="discover-nav-discover-link" href="{{ url_for('discover_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Discover</a>
+                    <a href="#" class=" px-3 py-2 text-sm font-medium nav-link-active">Settings</a>
+                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Account</a>
+                </div>
+                
+                <!-- Profile Dropdown (Unchanged) -->
+                <div class="hidden md:flex items-center space-x-4">
+                    <div class="relative">
+                        <button class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700 focus:outline-none ring-2 ring-offset-2 ring-transparent hover:ring-blue-700 transition" aria-label="User menu">
+                            {{ username[0] | upper if username else 'I' }}
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Mobile Menu Button (Unchanged) -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" id="mobile-menu-button" class="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <i id="menu-icon-open" class="fas fa-bars block h-6 w-6"></i>
+                        <i id="menu-icon-close" class="fas fa-times hidden h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu (FIXED) -->
+            <div class="md:hidden hidden" id="mobile-menu">
+                <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+                    <!-- 
+                    FIX:
+                    - 'active' classes (bg-blue-100) MOVED to "Home".
+                    - 'active' classes REMOVED from "Discover".
+                    -->
+                    <a id="discover-nav-home-link-mobile" href="{{ url_for('user_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-900 bg-blue-100" aria-current="page">Home</a>
+                    <a id="discover-nav-discover-link-mobile" href="{{ url_for('discover_page') }}" class="protected-nav-link block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-100">Discover</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Settings</a>
+                    <a href="#" class="text-gray-600 hover:bg-gray-100 block px-3 py-2 rounded-md text-base font-medium">Account</a>
+                </div>
+                <div class="pt-4 pb-3 border-t border-gray-200">
+                    <!-- ... (mobile profile section - unchanged) ... -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+
+
+    <div id="settings-page" class="p-4 md:p-8">
+
+    <h1 class="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+        <i class="fas fa-cog text-color-primary mr-3"></i>
+        Account Settings
+    </h1>
+    
+    <div class="space-y-8">
+        <section class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-xl font-semibold text-color-primary border-b pb-3 mb-4">Profile & Security</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <form id="profile-update-form" class="space-y-4">
+                    <h3 class="font-medium text-gray-700">User Information</h3>
+                    
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-600">Username</label>
+                        <input type="text" id="username" value="current_investor" disabled 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2 border focus:ring-color-primary focus:border-color-primary">
+                        <p class="text-xs text-gray-500 mt-1">Username cannot be changed.</p>
+                    </div>
+
+                    <div>
+                        <label for="role" class="block text-sm font-medium text-gray-600">Account Type</label>
+                        <input type="text" id="role" value="Institutional Investor" disabled 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-50 p-2 border">
+                    </div>
+                </form>
+
+                <form id="password-change-form" class="space-y-4 pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l lg:pl-6">
+                    <h3 class="font-medium text-gray-700">Change Password</h3>
+
+                    <div>
+                        <label for="current-password" class="block text-sm font-medium text-gray-600">Current Password</label>
+                        <input type="password" id="current-password" required 
+                               class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-color-primary focus:border-color-primary">
+                    </div>
+
+                    <div>
+                        <label for="new-password" class="block text-sm font-medium text-gray-600">New Password</label>
+                        <input type="password" id="new-password" required 
+                               class="mt-1 block w-full rounded-md border border-gray-300 shadow-sm p-2 focus:ring-color-primary focus:border-color-primary">
+                    </div>
+
+                    <button type="submit" 
+                            class="w-full justify-center rounded-md border border-transparent bg-color-primary py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-color-primary focus:ring-offset-2 transition duration-150">
+                        Update Password
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section class="bg-white shadow-lg rounded-xl p-6">
+            <h2 class="text-xl font-semibold text-color-primary border-b pb-3 mb-4">Dashboard Preferences</h2>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                    <p class="text-gray-700">Default Chart View</p>
+                    <select class="rounded-md border border-gray-300 p-2 text-sm focus:ring-color-primary focus:border-color-primary">
+                        <option>Bar Chart</option>
+                        <option>Radar Chart</option>
+                        <option>Table View</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0">
+                    <p class="text-gray-700">Receive Weekly ESG Summaries</p>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-color-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-color-primary"></div>
+                    </label>
+                </div>
+            </div>
+        </section>
+        
+        <section class="bg-white shadow-lg rounded-xl p-6 border-l-4 border-yellow-500">
+            <h2 class="text-xl font-semibold text-red-700 border-b pb-3 mb-4">Data Management</h2>
+            
+            <p class="text-gray-600 mb-4">Export your current portfolio data and risk analysis for offline review.</p>
+            
+            <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
+                <button class="flex-1 rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition duration-150">
+                    <i class="fas fa-file-csv mr-2"></i> Export Data (CSV)
+                </button>
+                <button class="flex-1 rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition duration-150">
+                    <i class="fas fa-file-pdf mr-2"></i> Generate Report (PDF)
+                </button>
+            </div>
+        </section>
+
+    </div>
+    
+</div>
+<footer class="bg-gray-800 text-gray-400 py-10 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+            <!-- Branding -->
+            <div class="col-span-2 md:col-span-1 mb-6 md:mb-0">
+                 <div class="flex items-center gap-2 mb-4">
+                     <svg class="h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" /></svg>
+                     <span class="text-2xl font-bold text-white">ESGate</span>
+                 </div>
+                 <p class="text-sm text-gray-500">&copy; 2025 ESGate. All rights reserved.</p>
+            </div>
+            <!-- Quick Links -->
+            <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Quick Links</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="{{ url_for('discover_page') }}" class="protected-nav-link hover:text-white hover:underline">Discover Companies</a></li>
+                     <li><a href="{{ url_for('analysis') }}" class="protected-nav-link hover:text-white hover:underline">Analysis Tool</a></li>
+                 </ul>
+            </div>
+             <!-- Company -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Company</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">About Us</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Contact</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">EU Regulatory References</a></li>
+                 </ul>
+            </div>
+             <!-- Legal -->
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Legal</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">Privacy Policy</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Terms of Service</a></li>
+                 </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

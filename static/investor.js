@@ -60,13 +60,55 @@
                 row.addEventListener('click', () => {
                     const targetId = row.getAttribute('data-target-id');
                     const targetPanel = document.getElementById(targetId);
+
                     if (targetPanel) {
-                        targetPanel.classList.toggle('hidden');
-                        row.setAttribute('aria-expanded', !targetPanel.classList.contains('hidden'));
+                        const isHidden = targetPanel.classList.toggle('hidden');
+                        row.setAttribute('aria-expanded', !isHidden);
+                        
+                        // --- Chart Creation Logic (Only runs when expanding) ---
+                        if (!isHidden && targetId === 'details-1') {
+                            const detailCtx = document.getElementById('detail-chart-1')?.getContext('2d');
+                            
+                            if (detailCtx) {
+                                // 🔑 FIX: Destroy the previous chart instance before creating a new one
+                                if (detailChart1Instance) {
+                                    detailChart1Instance.destroy();
+                                }
+                                
+                                // 🔑 FIX: Create the new chart and save the instance to the global variable
+                                detailChart1Instance = new Chart(detailCtx, {
+                                    type: 'radar',
+                                    data: {
+                                        labels: ['Environmental', 'Social', 'Governance', 'Ethics', 'Transparency'],
+                                        datasets: [
+                                            {
+                                                label: 'Agritech Solutions',
+                                                data: [85, 75, 90, 80, 78],
+                                                backgroundColor: 'rgba(30, 58, 138, 0.2)',
+                                                borderColor: 'rgba(30, 58, 138, 1)',
+                                                borderWidth: 2
+                                            },
+                                            {
+                                                label: 'Sector Average',
+                                                data: [60, 65, 70, 68, 70],
+                                                backgroundColor: 'rgba(209, 213, 219, 0.2)',
+                                                borderColor: 'rgba(107, 114, 128, 1)',
+                                                borderWidth: 1,
+                                                borderDash: [5, 5]
+                                            }
+                                        ]
+                                    },
+                                    options: {
+                                        responsive: true, maintainAspectRatio: false,
+                                        scales: { r: { beginAtZero: true, max: 100, ticks: { display: false, stepSize: 25 } } },
+                                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
+                                    }
+                                });
+                            }
+                        }
                     }
                 });
             });
-
             // --- loadProtectedPage Function ---
             async function loadProtectedPage(url) {
                  const token = localStorage.getItem('authToken');
@@ -98,7 +140,9 @@
              
              // --- Placeholder Chart.js Data ---
              // Placeholder for expanded row radar chart
-             const detailCtx = document.getElementById('detail-chart-1')?.getContext('2d');
+            let detailChartInstance = null;
+            const detailCtx = document.getElementById('detail-chart-1')?.getContext('2d');
+
              if (detailCtx) {
                  new Chart(detailCtx, {
                     type: 'radar',
@@ -161,6 +205,8 @@
                      }
                  });
              }
+
+
 
 
              

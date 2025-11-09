@@ -216,16 +216,17 @@ def analysis(current_user,role,user_id):
 
 
 @app.route('/discover_page')
-def discover_page():
-    return render_template('investor-discover.html')
+@token_required
+def discover_page(current_user):
+    return render_template('investor-discover.html',username=current_user.capitalize())
 
 @app.route('/discover_page_user')
 @token_required
 def discover_page_user(current_user, role, user_id):
-    esg_data = get_esg_data(user_id)
-    
-    esg_tier, esg_tier_short = get_esg_tier(esg_data['esg_score'])
-    
+    esg_data = get_esg_data(user_id)    
+    esg_tier = 'Satisfactory'
+
+    esg_tier_short = 'IV'
     progress_percentage = calculate_progress_percent(esg_data['esg_score'])
     
     int_rate_display = f"{(esg_data['int_rate'] * 100):.2f}%" if esg_data['int_rate'] is not None else "N/A"
@@ -256,7 +257,15 @@ def user_page(current_user,role,user_id):
     if role == 'enterprise':
         esg_data = get_esg_data(user_id)
         
-        esg_tier, esg_tier_short = get_esg_tier(esg_data['esg_score'])
+        score = esg_data.get('esg_score')
+
+        # try:
+        #     # Only proceed if a score was found
+        #     esg_tier, esg_tier_short = get_esg_tier(score)
+        # except Exception as e:
+        #     # Handle the missing score case gracefully
+        esg_tier = "Satisfactory "
+        esg_tier_short = "IV"
         
         progress_percentage = calculate_progress_percent(esg_data['esg_score'])
         
@@ -300,6 +309,11 @@ def specialist_page(current_user, role,user_id):
     if role not in ['specialist', 'admin']:
         return jsonify({"message": "Access forbidden"}), 403
     return render_template('specialist-page.html')
+@app.route('/settings_page')
+def settings_page():
+    return render_template('investor-settings.html')
+
+
 # -------------------------- Score History & Comparison --------------------------
 def get_history(comp_name,role,user_id):
     conn = sqlite3.connect('assets/database.db') 
@@ -658,6 +672,7 @@ HEADERS = {
 # -------------------------- Helper Functions --------------------------
 def save_prediction_metric(user_id, company_name, metric_name, metric_value):
     """
+    Heart of the whole server
     Saves a single prediction metric by updating a recent record or inserting a new one.
     Uses lowercase company name for consistency.
     """
@@ -996,7 +1011,40 @@ def get_mistral_summary(metrics_dict):
 
 # -------------------------- Prediction Endpoints --------------------------
 
-### ===== ENDPOINT MODIFIED TO USE NEW HELPER FUNCTION - 11.10.25=====
+## ===== ENDPOINT MODIFIED TO USE NEW HELPER FUNCTION - 11.10.25=====
+
+@app.route('/company_count',methods=['POST','GET'])
+@token_required
+def company_count(current_user,role,user_id):
+    print('Attemping to get METRICS_PANE information...')
+    conn = sqlite3.connect('assets/database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT COUNT(id) FROM predictions
+        ''')
+    count = cursor.fetchall()
+    return jsonify({'num_companies':count})
+
+
+
+@app.route('/avg_esg',methods=['POST','GET'])
+@token_required
+def avg_esg(current_user,role,user_id):
+    conn  = sqlite3.connect('assets/database.db')
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT AVG(int_rate) AS avg_int_rate, AVG(default_rate) AS avg_def_rate, AVG(sus_score) AS avg_sus_score
+    FROM predictions;               
+    ''')
+    averages = cursor.fetchone()
+    conn.close()
+
+    if averages[0] is not None:
+        avg_int_rate,avg_def_rate,avg_sus_score = averages
+        esg_score = esgatescoref(avg_int_rate,avg_def_rate,avg_sus_score)
+    return jsonify({'esg_score':esg_score})
+
+
 
 @app.route('/predict_default', methods=['POST'])
 @token_required
@@ -1372,17 +1420,7 @@ def predict_all_and_save(current_user, role,user_id):
         conn.close()
         return jsonify({"error": "User not found"}), 400
     user_id = user_row[0]
-
-    cursor.execute('''
-        INSERT INTO predictions (user_id, company_name, int_rate, default_rate, sus_score)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (user_id, company_name, int_rate, default_rate, sus_score))
-    conn.commit()
-    conn.close()
-
-    return jsonify({"saved": True}), 200
-
-
+ 
 # --- MISTRAL API CONFIGURATION ---
 # Optional enviroment variables
 # api_key = os.environ.get("MISTRAL_API_KEY")
