@@ -73,7 +73,7 @@
                     <a id="home-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link nav-link-inactive px-3 py-2  text-sm font-medium">Home</a>
                     <a id="home-nav-discover-link" href="{{ url_for('discover_page_user') }}" class="protected-nav-link nav-link-active px-3 py-2  text-sm font-medium">Discover</a>
                     <a id="home-nav-analysis-link" href="{{ url_for('analysis') }}" class="protected-nav-link nav-link-inactive px-3 py-2  text-sm font-medium">Analysis</a>
-                    <a href="#" class="nav-link-inactive px-3 py-2  text-sm font-medium">Settings</a>
+                    <a href="{{ url_for('settings_page')}}" class="nav-link-inactive px-3 py-2  text-sm font-medium">Settings</a>
                     <a href="#" class="nav-link-inactive px-3 py-2  text-sm font-medium">Account</a>
                 </div>
                 <!-- Profile Dropdown -->
@@ -81,7 +81,7 @@
                     <!-- Profile Dropdown Placeholder -->
                     <div class="relative">
                         <button class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-sm font-semibold text-gray-700 focus:outline-none ring-2 ring-offset-2 ring-transparent hover:ring-blue-700 transition">
-                            {{ username[0] | upper if username else 'U' }}
+                            {{ username[0] | upper if username else 'N' }}
                         </button>
                         <!-- Dropdown menu (hidden by default)
                         <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5">
@@ -233,10 +233,10 @@
                 </div>
                 <div class="flex-shrink-0 flex gap-3">
                     <button class="btn btn-primary">
-                        <i class="fas fa-file-pdf mr-2"></i> Download PDF
+                        <i class="fas fa-file-pdf mr-2" id="download-pdf"></i> Download PDF
                     </button>
-                    <button class="btn btn-secondary">
-                        <i class="fas fa-file-csv mr-2"></i> Export as CSV
+                    <button class="btn btn-secondary" id="download-csv">
+                        <i class="fas fa-file-csv mr-2" ></i> Export as CSV
                     </button>
                 </div>
              </div>
@@ -321,7 +321,35 @@
     <!-- JS for Mobile Menu, Accordion, and Protected Links -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            
+            // TASKS
+            // IMPLEMENT THE JS SIDE OF THE CSV EXPORT
+            // GET THE USERNAME
+            const download_csv = document.getElementById('download-csv');
+            const token = localStorage.getItem('authToken')
+            async function download() {
+                const response = await fetch('/get_data', {
+                    method: 'GET',
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+
+                if (!response.ok) {
+                    // Handle server errors (e.g., 400 or 500 status codes)
+                    console.error('Failed to fetch CSV data:', response.status);
+                    return; 
+                }                
+                const csvData = await response.text();
+                const blob = new Blob([csvData], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'predictions_export.csv'; 
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+            download_csv.addEventListener('click',download)
             // --- Mobile Menu Toggle ---
             const menuButton = document.getElementById('mobile-menu-button');
             const mobileMenu = document.getElementById('mobile-menu');
@@ -375,7 +403,6 @@
             });
 
             // --- loadProtectedPage Function ---
-            // This is required for the protected links to work
             async function loadProtectedPage(url) {
                  const token = localStorage.getItem('authToken');
                  if (!token) {

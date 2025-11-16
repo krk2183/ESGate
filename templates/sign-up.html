@@ -3,36 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>ESGate | Register Account</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'color-primary': '#006022', // Corporate Green
+              'color-primary-dark': '#004a1b', // Deeper Green for hover
+              'color-accent': '#fcd34d', // Gold/Amber accent for impact
+              'background-dark': '#0f172a', // Slate-900 
+            },
+            boxShadow: {
+                // Subtle shadow for the left panel to lift it slightly
+                'premium': '0 4px 20px rgba(0, 0, 0, 0.08)', 
+            }
+          }
+        }
+      }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
 
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; 
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Custom styling for the right panel: Subtle radial gradient for depth (The 'wow' factor) */
+        .premium-bg {
+            background-color: #006022; 
+            /* Radial gradient to deepen the edges and highlight the center text */
+            background-image: radial-gradient(at center center, rgba(255, 255, 255, 0.1) 0%, #006022 90%);
+        }
+        /* Custom styling for input focus */
+        .input-focus-style:focus {
+            border-color: #006022; 
+            box-shadow: 0 0 0 4px rgba(0, 96, 34, 0.2); /* Wider, softer focus ring */
+        }
+    </style>
 </head>
-<body>
-    <div class="container-2">
-        <form class="formBox-2" id="signupForm">
-            <h1>Create an Account</h1>
-            <input type="text" name="username" id="inputField-2" placeholder="Choose ID or Company Name" class="inputField-2" required>
-            <input type="password" name="password" id="passwordField-2" placeholder="Choose Password" class="inputField-2" required>
-            <input type="password" id="passwordField-3" placeholder="Repeat Password" class="inputField-3" required>
 
-            <div class="dropdown">
-                <label for="roleSelect" class="floatingLabel">Role</label>
-                <select name="role" id="roleSelect" class="inputField-3" required>
-                    <option href="#" value="enterprise">Enterprise</option>
-                    <option href="#" value="investor">Investor</option>
-                </select>
+<body class="min-h-screen flex text-gray-800">
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 w-full min-h-screen">
+
+        <div class="flex items-center justify-center p-6 sm:p-16 bg-white shadow-premium lg:shadow-none">
+            <div class="w-full max-w-md">
+                
+                <div class="text-center mb-10">
+                    <i class="fas fa-user-plus text-color-primary text-5xl mb-3"></i>
+                    <h1 class="text-5xl font-black text-gray-900 mt-2 tracking-tight">Register</h1>
+                    <p class="text-gray-500 mt-2 text-lg">Create your ESGate institutional account</p>
+                </div>
+                
+                <form id="signupForm" class="space-y-6">
+                    
+                    <div>
+                        <label for="inputField-2" class="block text-sm font-bold text-gray-700 mb-1">ID or Company Name</label>
+                        <input type="text" name="username" id="inputField-2" placeholder="Choose ID or Company Name" required
+                               class="mt-1 block w-full rounded-xl border border-gray-300 p-4 
+                                      text-gray-900 input-focus-style transition duration-150">
+                    </div>
+
+                    <div>
+                        <label for="roleSelect" class="block text-sm font-bold text-gray-700 mb-1">Account Role</label>
+                       <select name="role" id="roleSelect" required
+                                 class="mt-1 block w-full rounded-xl border border-gray-300 p-4 appearance-none
+                                       text-gray-900 bg-white input-focus-style transition duration-150 cursor-pointer">
+                            <option value="" disabled selected>Select Account Type</option>
+                            <option value="investor">Institutional Investor</option>
+                            <option value="enterprise">Corporate Enterprise</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="passwordField-2" class="block text-sm font-bold text-gray-700 mb-1">Password</label>
+                        <input type="password" name="password" id="passwordField-2" placeholder="Choose Password" required
+                               class="mt-1 block w-full rounded-xl border border-gray-300 p-4 
+                                      text-gray-900 input-focus-style transition duration-150">
+                    </div>
+                    
+                    <div>
+                        <label for="passwordField-3" class="block text-sm font-bold text-gray-700 mb-1">Confirm Password</label>
+                        <input type="password" id="passwordField-3" placeholder="Repeat Password" required
+                               class="mt-1 block w-full rounded-xl border border-gray-300 p-4 
+                                      text-gray-900 input-focus-style transition duration-150">
+                    </div>
+
+                    <div class="errorbox-2 hidden" id="errorbox-2">
+                        <h3 class="errortext text-red-600 text-sm font-bold">Error: User already exists!</h3>
+                    </div>
+
+                    <button type="button" id="submitButton-2" 
+                            class="w-full flex justify-center py-4 px-4 border border-transparent 
+                                   rounded-xl shadow-lg text-xl font-extrabold text-white 
+                                   bg-color-primary hover:bg-color-primary-dark 
+                                   focus:outline-none focus:ring-4 focus:ring-color-primary focus:ring-opacity-50 transition duration-300">
+                        CREATE ACCOUNT
+                    </button>
+                </form>
+                
+                <div class="text-center pt-8 border-t border-gray-200 mt-8">
+                    <p class="text-sm text-gray-500 mb-2">Already have an account?</p>
+                    <a href="{{ url_for('login_page') }}"
+                       class="inline-block w-full py-3 px-4 border border-gray-300 
+                              rounded-xl text-base font-semibold text-gray-700 
+                              hover:bg-gray-50 transition duration-150">
+                        Return to Log In
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="hidden lg:flex flex-col items-center justify-center p-12 text-white space-y-8 premium-bg">
+            
+            <div class="text-center mb-6">
+                <img src="{{ url_for('static',filename='esgate_logo.png')}}" width="400" height="400" class="mx-auto" alt="ESGate Logo" style="margin-right: 85px;"> 
             </div>
 
-            <button type="button" id="submitButton-2" class="submitButton-2">Sign up</button>
-            <h5 class="dont-2">Already have an account?</h5>
-        </form>
-        <a href="{{ url_for('home') }}">
-            <button id="log-in" class="log-in">Log in</button>
-        </a>
-        <div class="errorbox-2 hidden" id="errorbox-2">
-            <h3 class="errortext-2">Error: User already exists!</h3>
+            <h2 class="text-5xl font-black text-color-accent text-center tracking-tighter">
+                Lead The Transition.
+            </h2>
+            <p class="text-center text-xl max-w-md font-light leading-relaxed text-white">
+                Unparalleled ESG data, predictive risk modeling, and institutional-grade analytics—all in one secure platform.
+            </p>
+            
+            <ul class="space-y-5 pt-6 w-full max-w-xs">
+                <li class="flex items-center">
+                    <i class="fas fa-chart-area text-color-accent mt-1 mr-4 text-2xl"></i>
+                    <span class="font-bold text-lg">Predictive Risk Modeling</span>
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-database text-color-accent mt-1 mr-4 text-2xl"></i>
+                    <span class="font-bold text-lg">Verified Data Integrity</span>
+                </li>
+                <li class="flex items-center">
+                    <i class="fas fa-bolt text-color-accent mt-1 mr-4 text-2xl"></i>
+                    <span class="font-bold text-lg">Real-Time Compliance Feeds</span>
+                </li>
+            </ul>
+
         </div>
     </div>
+    
     <script src="{{ url_for('static', filename='backend.js') }}"></script>
 </body>
 </html>

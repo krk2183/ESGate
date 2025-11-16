@@ -184,37 +184,41 @@
 #     run_all_tests()
 
 
-def calculate_esgate_score(int_rate, default_rate, sus_score):
-    sustainability_component = (sus_score+0.1) * 10    
-    default_risk_component = (1 - default_rate) * 100
-    MAX_ACCEPTABLE_RATE = 0.7
-    normalized_rate = min(max(int_rate, 0.0), MAX_ACCEPTABLE_RATE) 
-    interest_rate_component = (1 - (normalized_rate / MAX_ACCEPTABLE_RATE)) * 100
-    WEIGHT_SUS = 0.31
-    WEIGHT_DEF = 0.41
-    WEIGHT_INT = 0.31
+# def calculate_esgate_score(int_rate, default_rate, sus_score):
+#     sustainability_component = (sus_score+0.1) * 10    
+#     default_risk_component = (1 - default_rate) * 100
+#     MAX_ACCEPTABLE_RATE = 0.7
+#     normalized_rate = min(max(int_rate, 0.0), MAX_ACCEPTABLE_RATE) 
+#     interest_rate_component = (1 - (normalized_rate / MAX_ACCEPTABLE_RATE)) * 100
+#     WEIGHT_SUS = 0.31
+#     WEIGHT_DEF = 0.41
+#     WEIGHT_INT = 0.31
     
-    final_score = (sustainability_component * WEIGHT_SUS) + \
-                  (default_risk_component * WEIGHT_DEF) + \
-                  (interest_rate_component * WEIGHT_INT)
+#     final_score = (sustainability_component * WEIGHT_SUS) + \
+#                   (default_risk_component * WEIGHT_DEF) + \
+#                   (interest_rate_component * WEIGHT_INT)
                   
-    return min(int(final_score),100)
+#     return min(int(final_score),100)
 
-intr_1 = 0.01
-defr_1 = 0.02
-susr_1 = 10.0
-score_1 = calculate_esgate_score(intr_1, defr_1, susr_1)
-print(f"Scenario 1 (Good): {score_1}")
+# intr_1 = 0.01
+# defr_1 = 0.02
+# susr_1 = 10.0
+# score_1 = calculate_esgate_score(intr_1, defr_1, susr_1)
+# print(f"Scenario 1 (Good): {score_1}")
 
-intr_2 = 0.18
-defr_2 = 0.67
-susr_2 = 6.0
-score_2 = calculate_esgate_score(intr_2, defr_2, susr_2)
-print(f"Scenario 2 (High Risk): {score_2}")
+# intr_2 = 0.18
+# defr_2 = 0.67
+# susr_2 = 6.0
+# score_2 = calculate_esgate_score(intr_2, defr_2, susr_2)
+# print(f"Scenario 2 (High Risk): {score_2}")
 
-intr_3 = 0.08
-defr_3 = 0.10
-susr_3 = 4.0
-score_3 = calculate_esgate_score(intr_3, defr_3, susr_3)
-print(f"Scenario 3 (Bad ESG): {score_3}")
+# intr_3 = 0.08
+# defr_3 = 0.10
+# susr_3 = 4.0
+# score_3 = calculate_esgate_score(intr_3, defr_3, susr_3)
+# print(f"Scenario 3 (Bad ESG): {score_3}")
 
+import pandas as pd
+data = pd.read_csv('predictions_export.csv')
+
+print(data.head())

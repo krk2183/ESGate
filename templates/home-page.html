@@ -6,7 +6,6 @@
     <title>ESGate - Home</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <!-- Font Awesome for icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Custom CSS (optional, but good for overriding or specific elements not covered by Tailwind) --><link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
      <style>
         .nav-link-active {
             color: #1e3a8a;
@@ -41,7 +40,7 @@
                     <a id="discover-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-active">Home</a>
                     <a id="discover-nav-discover-link" href="{{ url_for('discover_page_user') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Discover</a>
                     <a id="discover-nav-analysis-link" href="{{ url_for('analysis') }}" class="protected-nav-link px-3 py-2 text-sm font-medium nav-link-inactive">Analysis</a>
-                    <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Settings</a>
+                    <a href="{{ url_for('settings_page')}}" class="nav-link-inactive px-3 py-2 text-sm font-medium">Settings</a>
                     <a href="#" class="nav-link-inactive px-3 py-2 text-sm font-medium">Account</a>
                 </div>
                 
@@ -262,24 +261,24 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Learning Card 1 --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2">Top 5 ESG practices in 2025</h3>
-                        <p class="text-gray-700 text-sm mb-4">Stay ahead with the latest industry standards.</p>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2" id="card-1-title">Top 5 ESG practices in 2025</h3>
+                        <p class="text-gray-700 text-sm mb-4" id="card-1-summary">Stay ahead with the latest industry standards.</p>
                     </div>
-                    <a href="#" class="text-green-700 font-semibold hover:underline">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
+                    <a href="#" class="text-green-700 font-semibold hover:underline" id="read-1">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
                 </div>
                 <!-- Learning Card 2 --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2">How SMEs improved governance</h3>
-                        <p class="text-gray-700 text-sm mb-4">Case studies from your sector.</p>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2" id="card-2-title">How SMEs improved governance</h3>
+                        <p class="text-gray-700 text-sm mb-4" id="card-2-summary">Case studies from your sector.</p>
                     </div>
-                    <a href="#" class="text-green-700 font-semibold hover:underline">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
+                    <a href="#" class="text-green-700 font-semibold hover:underline" id="read-2">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
                 </div>
                 <!-- Learning Card 3 --><div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition duration-300 flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xl font-semibold text-gray-900 mb-2">New EU ESG directive explained (Azerbaijani context)</h3>
-                        <p class="text-gray-700 text-sm mb-4">Understand the regulatory landscape.</p>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2" id="card-3-title">New EU ESG directive explained (Azerbaijani context)</h3>
+                        <p class="text-gray-700 text-sm mb-4" id="card-3-summary">Understand the regulatory landscape.</p>
                     </div>
-                    <a href="#" class="text-green-700 font-semibold hover:underline">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
+                    <a href="#" class="text-green-700 font-semibold hover:underline" id="read-3">Read More <i class="fas fa-arrow-right text-sm ml-1"></i></a>
                 </div>
             </div>
         </section>

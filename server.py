@@ -2,10 +2,10 @@ from google import genai
 import pandas as pd
 import numpy as np
 import torch.nn as nn
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for,app
 from flask_cors import CORS
-import math, traceback, bcrypt,jwt,datetime,re,requests,json,torch,sqlite3, joblib,gc
-
+import math, traceback, bcrypt,jwt,datetime,re,requests,json,torch,sqlite3, joblib,gc,random
+from google.genai import types
 # -------------------------- Flask Setup --------------------------
 app = Flask(__name__)
 CORS(app)
@@ -15,7 +15,39 @@ client = genai.Client(api_key=API)
 model_n = 'gemini-2.5-flash'
 
 device = torch.device('cpu')  # CPU only 🙏🙏🥀
-
+ 
+news_prompts =    [
+        "Find one recent, important news story about the EU's Corporate Sustainability Reporting Directive (CSRD) scope changes for SMEs.",
+        "What is the most recent news regarding the EU's Omnibus package and its effect on ESG compliance for European SMEs?",
+        "Detail a recent, major news story on how new EU ESG regulations are altering the supply chain relationship between large European corporations and Azerbaijani SMEs.",
+        "Report one recent, significant development concerning the simplification of EU ESG rules and the impact on small and medium-sized enterprises (SMEs) in Europe.",
+        "Provide the latest news on Azerbaijan's SME market response to the indirect requirements of the EU's Corporate Sustainability Due Diligence Directive (CSDDD).",
+        "Identify a recent, important announcement from the European Commission regarding voluntary ESG reporting standards for SMEs in the EU.",
+        "Find one recent, major news story discussing the financial costs or investment trends for SMEs in Europe due to EU ESG compliance.",
+        "What is the most recent news on the European Parliament's vote concerning the threshold changes for the CSRD and CSDDD?",
+        "Detail a recent, important news story about how banks in Europe are adjusting their lending criteria for SMEs based on EU ESG mandates.",
+        "Report one recent, significant development concerning the role of Azerbaijani SMEs in the energy transition and their alignment with EU Green Deal principles.",
+        "Provide the latest news on any official EU-Azerbaijan dialogue or working group focused on ESG standards for local businesses.",
+        "Find one recent, major news story on the challenges or opportunities for EU-based SMEs in collecting Scope 3 emissions data from non-EU partners like Azerbaijan.",
+        "What is the most recent news regarding EFRAG's efforts to simplify the European Sustainability Reporting Standards (ESRS) for smaller companies?",
+        "Detail a recent, important news story about the proposed delay in the application deadlines for ESG reporting for listed SMEs in the EU.",
+        "Report one recent, significant development concerning the 'greenwashing' concerns among SMEs in Europe linked to new EU regulations.",
+        "Provide the latest news on how the EU's Carbon Border Adjustment Mechanism (CBAM) is indirectly affecting Azerbaijani SMEs that supply EU importers.",
+        "Find one recent, major news story about government support or subsidy programs for European SMEs to help with new ESG compliance burdens.",
+        "What is the most recent news regarding the potential for Azerbaijani SMEs to gain a competitive advantage by proactively adopting ESG principles?",
+        "Detail a recent, important news story on the backlash or criticism from business lobbies in Europe concerning the complexity of the CSRD for SMEs.",
+        "Report one recent, significant development concerning the role of digitalization and AI tools in helping European SMEs manage their new ESG reporting requirements.",
+        "Provide the latest news on whether the CSDDD's due diligence obligations still indirectly apply to non-EU SMEs supplying EU companies despite simplification efforts.",
+        "Find one recent, major news story about the establishment of new public-private partnerships to promote ESG readiness among SMEs in Azerbaijan.",
+        "What is the most recent news regarding investor interest in European SMEs with high ESG ratings following the introduction of EU regulations?",
+        "Detail a recent, important news story on the transfer of ESG technology or knowledge from the EU to partner countries' SMEs, focusing on Azerbaijan.",
+        "Report one recent, significant development concerning the impact of the EU Taxonomy Regulation on the financing options for SMEs in Europe.",
+        "Provide the latest news on the number of European SMEs expected to be newly excluded from the CSRD's scope due to the proposed Omnibus changes.",
+        "Find one recent, major news story about the adoption of a voluntary sustainability reporting standard (VSME) for non-listed SMEs in the EU.",
+        "What is the most recent news regarding the legal risks for SMEs in the EU that fail to comply with the new supply chain due diligence requirements?",
+        "Detail a recent, important news story on the challenges Azerbaijani SMEs face in proving their 'social' (S) and 'governance' (G) compliance to EU partners.",
+        "Report one recent, significant development concerning the harmonization of EU ESG standards with global standards and the implications for European SMEs."
+    ]
 # -------------------------- DB Setup --------------------------
 
 def init_db():
@@ -142,14 +174,12 @@ def get_esg_data(user_id):
             'esg_improvement': 0,
             'has_data': False
         }
-    
+
+
 def calculate_progress_percent(esg_score,target_score=80):
     if esg_score >= target_score:
         return 100
     return int((esg_score/target_score)* 100)
-
-        
-
 
 # -------------------------- HTML Page Serving --------------------------
 def token_required(f):
@@ -217,8 +247,8 @@ def analysis(current_user,role,user_id):
 
 @app.route('/discover_page')
 @token_required
-def discover_page(current_user):
-    return render_template('investor-discover.html',username=current_user.capitalize())
+def discover_page(current_user,role,user_id):
+    return render_template('investor-discover.html')
 
 @app.route('/discover_page_user')
 @token_required
@@ -662,7 +692,8 @@ numerical_cols_to_scale_fit = ['annual_revenue',
                            ]
 
 # --- Mistral AI setup ---
-MISTRAL_API_KEY = "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"
+# MISTRAL_API_KEY = "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"
+MISTRAL_API_KEY = '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'
 MISTRAL_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 HEADERS = {
     "Authorization": f"Bearer {MISTRAL_API_KEY}",
@@ -695,7 +726,7 @@ def save_prediction_metric(user_id, company_name, metric_name, metric_value):
     if not company_name_lower:
          print("WARNING: Attempting to save metric with empty company name. Skipping save.")
          conn.close()
-         return 
+         return ''
     try: 
         cursor.execute("""
             SELECT id FROM predictions
@@ -986,6 +1017,18 @@ def get_mistral_summary(metrics_dict):
         response.raise_for_status()
         result = response.json()
         print(f'Company Summary API Response: {result}')
+    
+            # Using the second API_KEY
+        if response.status_code != 200:
+            MISTRAL_API_KEY_S = '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'
+            HEADERS_S = {
+                "Authorization": f"Bearer {MISTRAL_API_KEY_S}",
+                "Content-Type": "application/json"
+            }
+            response = requests.post(MISTRAL_API_URL, headers=HEADERS_S, json=payload)
+            # return {"error": f"Mistral API error: {response.text}"}
+            result = response.json()
+
         return parse_mistral_api_output(result)
     except requests.exceptions.RequestException as e:
         print(f"Mistral API Request Failed for comapany summary: {e}")
@@ -995,19 +1038,35 @@ def get_mistral_summary(metrics_dict):
         traceback.print_exc()
         return {'error': f'Failed to process AI Analysis reponse: {e}'}
     
-
-    # Using the second API_KEY
-    if response.status_code != 200:
-        MISTRAL_API_KEY_S = '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'
-        HEADERS_S = {
-            "Authorization": f"Bearer {MISTRAL_API_KEY_S}",
-            "Content-Type": "application/json"
-        }
-        response = requests.post(MISTRAL_API_URL, headers=HEADERS_S, json=payload)
-
-        # return {"error": f"Mistral API error: {response.text}"}
-    result = response.json()
-    return parse_mistral_api_output(result)
+@app.route('/get_data',methods=['GET']) 
+@token_required 
+def db_to_csv(current_user,role,user_id):
+    conn = sqlite3.connect('assets/database.db')
+    cursor = conn.cursor()
+    
+    try:
+        user_id_int = int(user_id)
+    except (TypeError, ValueError):
+        conn.close()
+        return jsonify({"error": "Invalid User ID format."}), 400
+    cursor.execute(
+        'SELECT int_rate, default_rate, sus_score FROM predictions WHERE user_id=?', 
+        (user_id_int,) 
+    )
+    data = cursor.fetchall()
+    conn.close()
+    df = pd.DataFrame(
+        data, 
+        columns=['interest_rate', 'default_rate', 'sus_score']
+    )    
+    df = df.apply(pd.to_numeric, errors='coerce')
+    csv_string = df.to_csv(index=False)
+    
+    response = app.make_response(csv_string)
+    response.headers["Content-Disposition"] = "attachment; filename=predictions_export.csv"
+    response.headers["Content-type"] = "text/csv"
+    
+    return response
 
 # -------------------------- Prediction Endpoints --------------------------
 
@@ -1468,7 +1527,39 @@ def get_esg_tip():
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({'error': 'Failed to generate tip'}), 500
+# ------------------------ Last additions ------------------------
+@app.route('/get_gemini_news')
+def get_gemini_news():
+    sys_prompt = '''''
+    You are an output formatter. Your ONLY goal is to provide a single string output. 
+    The output MUST adhere to the following strict, hyphen-separated format:
+    [3 word news headline]*[very short summary of the article]*[link to the article]
 
+    CRITICAL RULES:
+    1. Do not use any asteriks (*) in the news headline. Use different punctuation (like a colon or comma) if necessary.
+    2. Do not use any hyphens (*) in the very short summary.
+    3. The summary must be a single, short sentence.
+    4. Do not include any introductory text, markdown, or concluding remarks. The response must be ONLY the formatted string.
+    '''
+    prompt = news_prompts[random.randrange(0,29)]
+    gen_config = types.GenerateContentConfig(system_instruction=sys_prompt)
+    response = client.models.generate_content(model=model_n,contents=[prompt],config=gen_config)
+    output = response.text # The response item itself gets discarded when .text is used on the response item itself
+
+    if output:
+        parts = output.split('*')
+        print('RAW OUTPUT',parts)
+        parts = [p.strip() for p in parts if p.strip()]
+        if parts:
+            headline = parts[0]
+            summary = parts[1]
+            link = parts[2]
+            print('SUCCESSFULLY parsed the output')
+            return jsonify({'title':headline,'summary':summary.strip(),'link':link.strip()})
+        else:
+            print('\n\n\n\nERROR WHILE PARSING FROM GEMINI\n\n\n\n')
+            return jsonify({'error':'GEMINI NEWS ERROR WHILE SPLITTING'})
+    
 
 # -------------------------- Run Server --------------------------
 if __name__ == '__main__':

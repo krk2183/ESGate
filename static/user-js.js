@@ -36,6 +36,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiOverallHistorySummaryEl = document.getElementById('aiOverallHistorySummary');
     const aiHistoryErrorEl = document.getElementById('aiHistoryError');
 
+    // Home page news
+    const card_1_title = document.getElementById('card-1-title');
+    const card_1_summary = document.getElementById('card-1-summary');
+    const read_1 = document.getElementById('read-1');
+    const card_2_title = document.getElementById('card-2-title');
+    const card_2_summary = document.getElementById('card-2-summary');
+    const read_2 = document.getElementById('read-2');
+    const card_3_title = document.getElementById('card-3-title');
+    const card_3_summary = document.getElementById('card-3-summary');
+    const read_3 = document.getElementById('read-3');
 
     // --- NEW: PROTECTED PAGE LOADER FUNCTION ---
     // (This function was missing from your user-js.js)
@@ -120,6 +130,34 @@ document.addEventListener('DOMContentLoaded', function() {
     if (fetchHistoryButton){
         fetchHistoryButton.addEventListener('click', handleFetchHistory);
     }
+    // HOME PAGE NEWS
+    async function set_news_elements() {
+        // V2 higher performance implementation
+        const promise1 = fetch('/get_gemini_news',{});
+        const promise2 = fetch('/get_gemini_news',{});
+        const promise3 = fetch('/get_gemini_news',{});
+        const [result1,result2,result3] = await Promise.all([
+            promise1,promise2,promise3
+        ]);
+        const [data1,data2,data3]  = await Promise.all([
+            result1.json(),result2.json(),result3.json()
+        ]);
+        card_1_title.innerHTML = data1.title;
+        card_1_summary.innerHTML = data1.summary;
+        read_1.href = data1.link;
+        card_2_title.innerHTML = data2.title;
+        card_2_summary.innerHTML = data2.summary;
+        read_2.href = data2.link;
+        card_3_title.innerHTML = data3.title;
+        card_3_summary.innerHTML = data3.summary;
+        read_3.href = data3.link; 
+
+    }
+
+    if (card_1_title) {
+        set_news_elements();
+    }
+
 
     // --- CORE FUNCTIONS (for Analysis Page) ---
     

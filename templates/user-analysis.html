@@ -308,11 +308,11 @@
                 <a id="analysis-nav-home-link" href="{{ url_for('user_page') }}" class="protected-nav-link">Home</a> 
                 <a href="{{ url_for('discover_page_user') }}">Discover</a>
                 <a id="analysis-nav-analysis-link" href="#" class="protected-nav-link active">Analysis</a> 
-                <a href="#" class="protected-nav-link">Settings</a>
+                <a href="{{ url_for('settings_page')}}" class="protected-nav-link">Settings</a>
                 <a href="#" class="protected-nav-link">Account </a>
                 <!-- <a href="{{ url_for('login_page') }}" class="ml-4 ...">Login / Sign Up</a> -->
             </div>
-  
+            
             <button class="mobile-menu-button">
             </button>
             <div class="nav-links-mobile">
@@ -469,23 +469,64 @@
                 <div id="historySpinner" class="spinner hidden"></div> 
             </div>
 
-            <div class="card">
+            <div class="card space-y-4">
                 <h2>Historical Comparison</h2>
-                <div class="chart-container">
-                    <canvas id="interestRateChart"></canvas>
+
+                <div class="border rounded-lg overflow-hidden shadow-sm">
+                    <div class="flex justify-between items-center p-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition duration-150" 
+                        onclick="toggleDropdown('contentInterestRateChart', 'chevronInterestRate')">
+                        <p class="font-bold text-gray-800">Interest Rate Trend</p>
+                        <i class="fas fa-chevron-down transform transition-transform duration-200" id="chevronInterestRate"></i>
+                    </div>
+                    <div id="contentInterestRateChart" class="p-3 hidden bg-white">
+                        <div class="chart-container">
+                            <canvas id="interestRateChart"></canvas>
+                        </div>
+                    </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="defaultRateChart"></canvas>
+
+                <div class="border rounded-lg overflow-hidden shadow-sm">
+                    <div class="flex justify-between items-center p-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition duration-150" 
+                        onclick="toggleDropdown('contentDefaultRateChart', 'chevronDefaultRate')">
+                        <p class="font-bold text-gray-800">Default Rate Trend</p>
+                        <i class="fas fa-chevron-down transform transition-transform duration-200" id="chevronDefaultRate"></i>
+                    </div>
+                    <div id="contentDefaultRateChart" class="p-3 hidden bg-white">
+                        <div class="chart-container">
+                            <canvas id="defaultRateChart"></canvas>
+                        </div>
+                    </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="sustainabilityScoreChart"></canvas>
+
+                <div class="border rounded-lg overflow-hidden shadow-sm">
+                    <div class="flex justify-between items-center p-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition duration-150" 
+                        onclick="toggleDropdown('contentSusScoreChart', 'chevronSusScore')">
+                        <p class="font-bold text-gray-800">Sustainability Score Trend</p>
+                        <i class="fas fa-chevron-down transform transition-transform duration-200" id="chevronSusScore"></i>
+                    </div>
+                    <div id="contentSusScoreChart" class="p-3 hidden bg-white">
+                        <div class="chart-container">
+                            <canvas id="sustainabilityScoreChart"></canvas>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </div>
     </main>
 
     <script>
-        // JavaScript for mobile menu toggle ONLY
+
+        function toggleDropdown(contentId, chevronId) {
+            const content = document.getElementById(contentId);
+            const chevron = document.getElementById(chevronId);
+            
+            if (content && chevron) {
+                content.classList.toggle('hidden');                
+                chevron.classList.toggle('rotate-180');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const menuButton = document.querySelector('.mobile-menu-button');
             const mobileMenu = document.querySelector('.nav-links-mobile');
