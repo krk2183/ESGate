@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESGate | Detailed ROI & Implementation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #374151;
+        }
+        .btn {
+            @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2;
+        }
+        .btn-primary {
+            @apply text-white bg-blue-800 hover:bg-blue-900 focus:ring-blue-700;
+        }
+        .btn-secondary {
+            @apply text-blue-800 bg-blue-100 hover:bg-blue-200 focus:ring-blue-500;
+        }
+        .loader {
+            border-top-color: #1e40af; /* blue-800 */
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="{{ url_for('user_page') }}" class="protected-nav-link flex-shrink-0 flex items-center gap-2 cursor-pointer">
+                    <svg class="h-8 w-8 text-blue-800" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" />
+                    </svg>
+                    <span class="text-2xl font-bold text-gray-900">ESGate</span>
+                </a>
+
+                <a href="{{ url_for('discover_page_user') }}" class="btn btn-secondary protected-nav-link">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Improvement Dashboard
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pt-12">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">AI-Powered ROI & Implementation Plan</h1>
+        <p class="text-lg text-gray-600 mb-8">Your personalized strategy to maximize returns and achieve EU compliance. <span class="font-semibold">Powered by Gemini.</span></p>
+        
+        <section class="bg-white shadow-xl rounded-lg p-6 sm:p-8 mb-10 border-t-4 border-blue-800">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 flex items-center"><i class="fas fa-robot text-blue-800 mr-3"></i> AI Gap Analysis & Focus</h2>
+            <p class="text-gray-600 mb-6">Select the ESG pillar you want to focus on for **maximum ROI** this quarter. This will guide the AI to generate the most impactful plan.</p>
+            
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="md:w-1/2">
+                    <label for="roi_focus" class="block text-sm font-medium text-gray-700 mb-2">Select Primary Focus Area:</label>
+                    <select id="roi_focus" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm">
+                        <option value="environment">Environment (E) - Energy/Waste Reduction</option>
+                        <option value="social">Social (S) - Workforce/Production Speed</option>
+                        <option value="governance">Governance (G) - Transparency/Compliance</option>
+                        <option value="highest_roi" selected>AI Recommendation (Highest Expected ROI)</option>
+                    </select>
+                </div>
+
+                <div class="md:w-1/2 flex items-end">
+                    <button id="generate_plan_btn" class="btn btn-primary w-full text-base">
+                        <i class="fas fa-cogs mr-2"></i> Generate Prioritized Action Plan
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div id="loading_state" class="hidden flex justify-center items-center py-10">
+            <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-12 w-12 mr-3"></div>
+            <p class="text-lg font-medium text-gray-600">Generating personalized plan with AI (This may take a moment)...</p>
+        </div>
+
+
+        <section id="plan_output" class="hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-600 lg:col-span-1">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center"><i class="fas fa-sack-dollar text-blue-600 mr-2"></i> ROI Financial Summary</h3>
+                    <p class="text-sm text-gray-500" id="has_data_status">...</p>
+                    <p class="text-xl font-bold text-gray-800 mt-2" id="roi_summary_content">...</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-600 lg:col-span-1">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2 flex items-center"><i class="fas fa-exclamation-triangle text-red-600 mr-2"></i> Compliance Risk Assessment</h3>
+                    <p class="text-sm text-gray-500">Immediate EU Market Risk:</p>
+                    <p class="text-xl font-bold text-gray-800 mt-2" id="compliance_risk_content">...</p>
+                </div>
+
+                <div id="learning_section" class="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded-lg flex flex-col justify-center">
+                    <h4 class="font-semibold text-yellow-800 mb-2"><i class="fas fa-book-open mr-2"></i> Contextual Learning Engine:</h4>
+                    <p class="text-sm text-yellow-700 mb-3" id="learning_topic">...</p>
+                    <a href="#" id="learning_link" class="text-yellow-800 font-semibold text-sm py-2 px-4 bg-yellow-200 rounded-md hover:bg-yellow-300 transition duration-200 text-center"><i class="fas fa-video mr-2"></i> Access Relevant KOBIA Training</a>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold text-gray-900 mb-6 mt-8 flex items-center"><i class="fas fa-clipboard-list text-blue-800 mr-3"></i> ROI Suggestions (3-Step Proposal)</h2>
+            
+            <div id="proposals_container" class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                 </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-gray-400 py-10 px-4 sm:px-6 lg:px-8 mt-16">
+        <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div class="col-span-2 md:col-span-1 mb-6 md:mb-0">
+                 <div class="flex items-center gap-2 mb-4">
+                     <svg class="h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 0 1-9-9 9 9 0 0 1 9-9 9 9 0 0 1 9 9c0 2.347-1.12 4.46-2.812 5.866M12 21V3m0 18a9 9 0 0 0 9-9 9 9 0 0 0-9-9m0 18h0" /> <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 12a4.5 4.5 0 0 1 9 0" /></svg>
+                     <span class="text-2xl font-bold text-white">ESGate</span>
+                 </div>
+                 <p class="text-sm text-gray-500">&copy; 2025 ESGate. All rights reserved.</p>
+            </div>
+            <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Quick Links</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="{{ url_for('discover_page') }}" class="protected-nav-link hover:text-white hover:underline">Discover Companies</a></li>
+                     <li><a href="{{ url_for('analysis') }}" class="protected-nav-link hover:text-white hover:underline">Analysis Tool</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Investor Dashboard</a></li>
+                 </ul>
+            </div>
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Company</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">About Us</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Contact</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">EU Regulatory References</a></li>
+                 </ul>
+            </div>
+             <div>
+                 <h4 class="font-semibold text-white mb-3 uppercase tracking-wider text-sm">Legal</h4>
+                 <ul class="space-y-2 text-sm">
+                     <li><a href="#" class="hover:text-white hover:underline">Privacy Policy</a></li>
+                     <li><a href="#" class="hover:text-white hover:underline">Terms of Service</a></li>
+                 </ul>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            
+            // ----------------------------------------------------
+            // 1. CONSTANTS AND ELEMENT REFERENCES
+            // ----------------------------------------------------
+            const generateBtn = document.getElementById('generate_plan_btn');
+            const outputSection = document.getElementById('plan_output');
+            const loadingState = document.getElementById('loading_state');
+            const roiSummaryContent = document.getElementById('roi_summary_content');
+            const complianceRiskContent = document.getElementById('compliance_risk_content');
+            const learningTopic = document.getElementById('learning_topic');
+            const proposalsContainer = document.getElementById('proposals_container');
+            const roiFocus = document.getElementById('roi_focus');
+            const hasDataStatus = document.getElementById('has_data_status');
+
+
+            // ----------------------------------------------------
+            // 2. CORE AI PLAN GENERATION FUNCTION
+            // ----------------------------------------------------
+            async function triggerPlanGeneration() {
+                // Use the selected focus, defaulting to the AI's recommendation
+                const focus = roiFocus.value; 
+                
+                // Show loading state and hide results
+                outputSection.classList.add('hidden');
+                loadingState.classList.remove('hidden');
+                generateBtn.disabled = true;
+
+                try {
+                    const token = localStorage.getItem('authToken');
+                    if (!token) {
+                        alert('Authentication failed. Please log in.');
+                        window.location.href = "{{ url_for('login_page') }}";
+                        return;
+                    }
+
+                    // Call the new Flask endpoint with the user's selected focus
+                    const response = await fetch('/api/generate_roi_plan', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}` 
+                        },
+                        body: JSON.stringify({ focus: focus })
+                    });
+                    
+                    if (response.status === 500) {
+                        // Check if it's the specific 500 fallback you defined
+                        const errorResult = await response.json();
+                        if (errorResult.roi_summary.includes("AI Service unavailable")) {
+                            console.warn("Using AI Fallback data.");
+                            displayResults(errorResult);
+                        } else {
+                            throw new Error('Server responded with an unknown 500 error.');
+                        }
+                    } else if (!response.ok) {
+                        throw new Error('Server responded with an error status.');
+                    } else {
+                        const result = await response.json();
+                        displayResults(result);
+                    }
+
+                } catch (error) {
+                    console.error("AI Generation Error:", error);
+                    alert('An error occurred while generating the plan. Please check the server console.');
+                }
+
+                // Hide loading state and re-enable button
+                loadingState.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+
+            // ----------------------------------------------------
+            // 3. DISPLAY RESULTS FUNCTION (Renderer)
+            // ----------------------------------------------------
+            function displayResults(result) {
+                
+                // Update Summary Cards
+                roiSummaryContent.textContent = result.roi_summary;
+                complianceRiskContent.textContent = result.compliance_risk_assessment;
+                learningTopic.textContent = result.learning_topic;
+                
+                if (result.has_data) {
+                    hasDataStatus.textContent = "Plan generated using your latest compliance scores.";
+                } else {
+                    hasDataStatus.textContent = "No compliance data found. Showing foundational starting advice.";
+                }
+
+                // Render Proposals (Cards with Graphs)
+                proposalsContainer.innerHTML = result.proposals.map((proposal, index) => {
+                    const iconClass = index === 0 ? 'fas fa-rocket text-green-600' : 
+                                    index === 1 ? 'fas fa-check-circle text-yellow-600' : 
+                                    'fas fa-shield-alt text-blue-600';
+                    const barColor = index === 0 ? 'bg-green-500' : 
+                                    index === 1 ? 'bg-yellow-500' : 
+                                    'bg-blue-500';
+                    
+                    // Ensure the value is within a sensible range for the bar chart
+                    const chartValue = Math.min(100, Math.max(15, proposal.predicted_output_graph_value || 0));
+
+                    return `
+                        <div class="bg-white p-6 rounded-lg shadow-lg border-t-8 border-gray-100 hover:shadow-2xl transition duration-300">
+                            <div class="flex items-center mb-4">
+                                <i class="${iconClass} text-2xl mr-3"></i>
+                                <h3 class="text-xl font-bold text-gray-900">Proposal ${index + 1}: ${proposal.title}</h3>
+                            </div>
+                            <p class="text-gray-600 mb-6">${proposal.description}</p>
+                            
+                            <div class="mt-4">
+                                <p class="text-sm font-semibold text-gray-700 mb-2">Predicted 6-Month Impact:</p>
+                                <div class="h-8 bg-gray-200 rounded-full overflow-hidden">
+                                    <div 
+                                        class="h-full ${barColor} text-xs font-medium text-white text-center p-0.5 leading-none rounded-full" 
+                                        style="width: ${chartValue}%;"
+                                    >
+                                        ${chartValue}% Gain
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+
+                outputSection.classList.remove('hidden');
+            }
+
+            // ----------------------------------------------------
+            // 4. TRIGGER MECHANISMS
+            // ----------------------------------------------------
+            
+            // A. Manual Trigger (Button Click)
+            generateBtn.addEventListener('click', triggerPlanGeneration);
+
+            // B. Automatic Trigger on Page Load (The requested plug-and-play feature)
+            triggerPlanGeneration();
+
+
+            // ----------------------------------------------------
+            // 5. PROTECTED NAVIGATION LOGIC (CRITICAL FOR FLASK APP)
+            // ----------------------------------------------------
+            
+            // Listener handles all protected links on the page 
+            document.body.addEventListener('click', function(event) {
+                const protectedLink = event.target.closest('a.protected-nav-link'); 
+                if (protectedLink) {
+                    event.preventDefault(); 
+                    const url = protectedLink.getAttribute('href');
+                    if (url && url !== '#') {
+                        loadProtectedPage(url); 
+                    }
+                }
+            });
+
+            async function loadProtectedPage(url) {
+                const token = localStorage.getItem('authToken');
+                if (!token) {
+                    console.log("No auth token found, redirecting to login.");
+                    window.location.href = "{{ url_for('login_page') }}"; 
+                    return;
+                }
+                try {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const pageHtml = await response.text();
+                        document.open(); 
+                        document.write(pageHtml);
+                        document.close();
+                    } else {
+                        console.log("Response not OK, removing token and redirecting.");
+                        localStorage.removeItem('authToken');
+                        alert('Session expired or invalid. Please log in again.');
+                        window.location.href = "{{ url_for('login_page') }}";
+                    }
+                } catch (error) {
+                    console.error('Failed to load protected page:', error);
+                }
+            }
+
+        }); // End DOMContentLoaded
+    </script>
+
+</body>
+</html>

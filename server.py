@@ -58,7 +58,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password BLOB NOT NULL, 
-            role TEXT NOT NULL
+            role TEXT NOT NULL, 
+            com_category TEXT 
         )
     ''')
     user_conn.commit()
@@ -72,6 +73,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             company_name TEXT,
+            com_category TEXT,  -- <--- NEW COLUMN ADDED HERE
             int_rate REAL,
             default_rate REAL,
             sus_score REAL,
@@ -95,6 +97,8 @@ def dict_factory(cursor, row):
         else:
             d[col[0]] = row[idx]
     return d
+
+
 
 # -------------------------- HelperS --------------------------
 from functools import wraps
@@ -275,6 +279,152 @@ def discover_page_user(current_user, role, user_id):
                           progress_percentage=progress_percentage,
                           has_data=esg_data['has_data'])
 
+# In server-app.py, around line 98, after get_esg_data:
+
+def get_user_details(user_id):
+    """Fetches user's company category and username for personalized prompts."""
+    conn = sqlite3.connect('assets/users.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT com_category, username FROM users WHERE id=?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return row[0], row[1] # category, username
+    return "Unspecified", "User"
+
+def generate_roi_prompt(user_data, focus):
+    """Constructs the prompt for Gemini based on data availability."""
+    company_category, username = get_user_details(user_data['user_id'])
+    
+    # --- PROMPT FOR COMPANIES WITH EXISTING DATA ---
+    if user_data['has_data'] and user_data.get('int_rate') is not None and user_data.get('sus_score') is not None:
+        esg_score = user_data['esg_score']
+        int_rate_pct = f"{(user_data['int_rate'] * 100):.2f}%"
+        default_rate_pct = f"{(user_data['default_rate'] * 100):.2f}%"
+        sus_score_out_of_10 = user_data['sus_score']
+        
+        prompt = f"""
+        You are the ESGate AI-Powered ROI Optimizer. Your user is an SME in the '{company_category}' sector in Azerbaijan.
+        Current Performance Metrics: Overall ESGate Score: {esg_score:.2f}/100, Interest Rate Probability: {int_rate_pct}, Default Probability: {default_rate_pct}, Sustainability Score (Internal): {sus_score_out_of_10:.2f}/10. Improvement over last period: {user_data['esg_improvement']:.2f} points.
+        The user wants a proposal focused on: '{focus}'.
+        
+        Task: Generate a highly professional, detailed, 3-point **ROI Optimization Proposal** focused on the '{focus}' area, prioritizing the highest financial impact.
+        
+        For each of the 3 steps, provide a short **Title**, a concise **Description** (1-2 sentences), and a **Predicted_Output_Graph_Value** (a single integer between 10 and 50 representing the predicted % ROI/Compliance gain for that step over 6 months).
+        
+        Also, generate a general **ROI_Summary**, a **Compliance_Risk_Assessment** for EU market entry, and a **learning_topic** for the Contextual Learning Engine.
+        
+        Return the response in a strict, single JSON object using the required schema.
+        """
+        
+    # --- PROMPT FOR NEW COMPANIES (NO DATA) ---
+    else:
+        # No data: General advice
+        prompt = f"""
+        You are the ESGate AI-Powered ROI Optimizer. Your user is a new SME in the '{company_category}' sector in Azerbaijan, which has no prior ESG data.
+        
+        Task: Generate a professional, detailed, 3-point **Foundational ROI Proposal** for a company just starting its ESG journey. Focus on low-hanging fruit for the '{company_category}' sector to build a foundation for EU compliance and securing initial financial benefits (Low-Hanging Fruit).
+        
+        For each of the 3 steps, provide a short **Title**, a concise **Description** (1-2 sentences), and a **Predicted_Output_Graph_Value** (a single integer between 10 and 50 representing the estimated % compliance gain/efficiency improvement for that step over 6 months).
+        
+        Also, generate a general **ROI_Summary**, a **Compliance_Risk_Assessment** (general assessment), and a **learning_topic** (foundational lesson) for the Contextual Learning Engine.
+        
+        Return the response in a strict, single JSON object using the required schema.
+        """
+        
+    return prompt
+
+
+@app.route('/api/generate_roi_plan', methods=['POST'])
+@token_required
+def generate_roi_plan_endpoint(current_user, role, user_id):
+    try:
+        data = request.get_json()
+        focus = data.get('focus', 'highest_roi')        
+        esg_metrics = get_esg_data(user_id)        
+        user_category, _ = get_user_details(user_id)        
+        esg_metrics['user_id'] = user_id
+        esg_metrics['user_category'] = user_category
+        gemini_prompt = generate_roi_prompt(esg_metrics, focus)
+        
+        config = types.GenerateContentConfig(
+            response_mime_type="application/json",
+            response_schema={
+                "type": "object",
+                "properties": {
+                    "has_data": {"type": "boolean"},
+                    "roi_summary": {"type": "string"},
+                    "compliance_risk_assessment": {"type": "string"},
+                    "learning_topic": {"type": "string"},
+                    "proposals": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "title": {"type": "string"},
+                                "description": {"type": "string"},
+                                "predicted_output_graph_value": {"type": "integer"}
+                            },
+                            "required": ["title", "description", "predicted_output_graph_value"]
+                        }
+                    }
+                },
+                "required": ["has_data", "roi_summary", "compliance_risk_assessment", "learning_topic", "proposals"]
+            }
+        )
+        
+        # 5. Call Gemini
+        response = client.models.generate_content(
+            model=model_n, 
+            contents=gemini_prompt,
+            config=config
+        )
+        
+        ai_output = json.loads(response.text)
+        return jsonify(ai_output), 200
+
+    except Exception as e:
+        print(f"Error in Gemini ROI plan generation: {e}")
+        traceback.print_exc()
+        
+        # Fallback response (Crucial for MVP demonstration)
+        fallback_response = {
+            "has_data": False,
+            "roi_summary": "AI Service unavailable. Default foundational advice provided.",
+            "compliance_risk_assessment": "Immediate high risk due to lack of documented compliance efforts.",
+            "learning_topic": "Foundational ESG for SMEs",
+            "proposals": [
+                {
+                    "title": "Establish Digital Record Keeping",
+                    "description": "Start migrating all financial and operational records to a structured digital format for audit readiness.",
+                    "predicted_output_graph_value": 25
+                },
+                {
+                    "title": "Define Core Metrics (Energy/Waste)",
+                    "description": "Select three key environmental metrics (e.g., monthly electricity consumption, waste volume) and start tracking them manually.",
+                    "predicted_output_graph_value": 30
+                },
+                {
+                    "title": "Formalize Management Structure",
+                    "description": "Document the basic management team, ownership, and formal policies (e.g., anti-corruption) required for basic governance standards.",
+                    "predicted_output_graph_value": 20
+                }
+            ]
+        }
+        return jsonify(fallback_response), 500
+
+@app.route('/roi_imp') 
+# @jwt_required() 
+def roi_imp():
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        username_for_template = "User" 
+    else:
+        return redirect(url_for('login_page'))
+    
+    return render_template('roi-img.html', 
+        username=username_for_template) 
+
 
 @app.route('/sign-up-page')         
 def signup_page():
@@ -316,7 +466,8 @@ def user_page(current_user,role,user_id):
                             social_score=social_score,
                             governance_score=governance_score,
                             progress_percentage=progress_percentage,
-                            has_data=esg_data['has_data'])
+                            has_data=esg_data['has_data'],
+                            com_category = 'Textile')
     elif role=='investor':
         return render_template('investor-home.html')
     else:
@@ -530,6 +681,7 @@ def signup_submit():
     username = request.json.get('username')
     password = request.json.get('password')
     role = request.json.get('role', 'user')
+    category = request.json.get('category','unspecified')
     
     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     
@@ -539,16 +691,25 @@ def signup_submit():
     if cursor.fetchone():
         conn.close()
         return jsonify({"message": "Username already exists"}), 400
-    cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", (username, hashed_password, role))
+    cursor.execute("INSERT INTO users (username, password, role,com_category) VALUES (?, ?, ?, ?)", (username, hashed_password, role,category))
     conn.commit()
     conn.close()
     return jsonify({"message": "Sign-up successful"}), 200
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.json.get('username')
-    password = request.json.get('password')
-    remember_me = request.json.get('remember')
+    try:
+        data = request.get_json(force=True)
+    except Exception as e:
+        print(f"JSON Parsing Error: {e}")
+        return jsonify({"message": "Request body must be valid JSON."}), 400
+        
+    username = data.get('username')
+    password = data.get('password')
+    remember_me = data.get('remember')
+
+    if not username or not password:
+        return jsonify({"message": "Missing username or password in request."}), 400
 
 
     conn = sqlite3.connect('assets/users.db') 
@@ -585,6 +746,7 @@ def login():
             return jsonify({"token": token, "role": role}), 200
 
     return jsonify({"message": "Invalid credentials"}), 401
+
 class NeuralNet(nn.Module):
     """Adaptable PyTorch Neural Network Model for Classification or Regression that can be reused in the future. <--- !!!!!! """
     def __init__(self, input_size, hidden_sizes, output_size, dropout=0.2, is_classification=False):
@@ -693,7 +855,7 @@ numerical_cols_to_scale_fit = ['annual_revenue',
 
 # --- Mistral AI setup ---
 # MISTRAL_API_KEY = "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"
-MISTRAL_API_KEY = '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'
+MISTRAL_API_KEY = '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'
 MISTRAL_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 HEADERS = {
     "Authorization": f"Bearer {MISTRAL_API_KEY}",
@@ -701,62 +863,52 @@ HEADERS = {
 }
 
 # -------------------------- Helper Functions --------------------------
-def save_prediction_metric(user_id, company_name, metric_name, metric_value):
+def save_prediction_metric(user_id, company_name, category, metric_name, metric_value):
     """
-    Heart of the whole server
     Saves a single prediction metric by updating a recent record or inserting a new one.
-    Uses lowercase company name for consistency.
     """
-    # --- MAGIC DEBUGGER PART 2 ---
     print(f"\n--- Saving Metric ---")
     print(f"User ID: {user_id}")
-    print(f"Original Company Name: '{company_name}'")
-    company_name_lower = str(company_name).lower().strip() if company_name else ''
-    print(f"Lowercase Company Name: '{company_name_lower}'")
-    print(f"Metric: {metric_name}")
-    print(f"Value: {metric_value}")
+    print(f"Metric: {metric_name}, Value: {metric_value}")
 
     conn = sqlite3.connect('assets/database.db')
     cursor = conn.cursor()
+    company_name_lower = str(company_name).lower().strip() if company_name else ''
 
     if metric_name not in ['int_rate', 'default_rate', 'sus_score']:
         conn.close()
         raise ValueError("Invalid metric_name provided.")
 
-    if not company_name_lower:
-         print("WARNING: Attempting to save metric with empty company name. Skipping save.")
-         conn.close()
-         return ''
     try: 
+        # Check for recent record
         cursor.execute("""
             SELECT id FROM predictions
             WHERE user_id = ? AND lower(company_name) = ? AND created_at >= datetime('now', '-5 minutes')
             ORDER BY created_at DESC
             LIMIT 1
-        """, (user_id, company_name_lower)) # Use lowercase name here
+        """, (user_id, company_name_lower)) 
         recent_record = cursor.fetchone()
 
         if recent_record:
             record_id = recent_record[0]
-            print(f"Found recent record (ID: {record_id}). Updating {metric_name}...")
+            print(f"Updating record {record_id}...")
             query = f"UPDATE predictions SET {metric_name} = ? WHERE id = ?"
             cursor.execute(query, (metric_value, record_id))
         else:
-            print(f"No recent record found. Inserting new record for {metric_name}...")
-            query = f"INSERT INTO predictions (user_id, company_name, {metric_name}) VALUES (?, ?, ?)"
-            cursor.execute(query, (user_id, company_name_lower, metric_value))
-            print(f"Inserted new record.")
+            print(f"Inserting new record...")
+            # Corrected INSERT statement with com_category
+            query = f"INSERT INTO predictions (user_id, company_name, com_category, {metric_name}) VALUES (?, ?, ?, ?)"
+            cursor.execute(query, (user_id, company_name_lower, category, metric_value))
 
         conn.commit()
-        print(f"Successfully saved {metric_name} for '{company_name_lower}' (User ID: {user_id})")
+        print(f"Saved successfully.")
 
     except sqlite3.Error as e:
         print(f"DATABASE ERROR during save: {e}")
         conn.rollback()
     finally:
         conn.close()
-
-    gc.collect()
+        gc.collect()
 
 # Quality of life improvement
 def is_finite(num):
@@ -1070,8 +1222,6 @@ def db_to_csv(current_user,role,user_id):
 
 # -------------------------- Prediction Endpoints --------------------------
 
-## ===== ENDPOINT MODIFIED TO USE NEW HELPER FUNCTION - 11.10.25=====
-
 @app.route('/company_count',methods=['POST','GET'])
 @token_required
 def company_count(current_user,role,user_id):
@@ -1086,10 +1236,11 @@ def company_count(current_user,role,user_id):
 
 
 
-@app.route('/avg_esg',methods=['POST','GET'])
+
+@app.route('/avg_esg', methods=['POST','GET'])
 @token_required
-def avg_esg(current_user,role,user_id):
-    conn  = sqlite3.connect('assets/database.db')
+def avg_esg(current_user, role, user_id):
+    conn = sqlite3.connect('assets/database.db')
     cursor = conn.cursor()
     cursor.execute('''
     SELECT AVG(int_rate) AS avg_int_rate, AVG(default_rate) AS avg_def_rate, AVG(sus_score) AS avg_sus_score
@@ -1098,10 +1249,77 @@ def avg_esg(current_user,role,user_id):
     averages = cursor.fetchone()
     conn.close()
 
-    if averages[0] is not None:
-        avg_int_rate,avg_def_rate,avg_sus_score = averages
-        esg_score = esgatescoref(avg_int_rate,avg_def_rate,avg_sus_score)
-    return jsonify({'esg_score':esg_score})
+    esg_score = 0 
+
+    if averages and averages[0] is not None:
+        avg_int_rate, avg_def_rate, avg_sus_score = averages
+        try:
+            esg_score = esgatescoref(avg_int_rate, avg_def_rate, avg_sus_score)
+        except Exception:
+            esg_score = 0
+            
+    return jsonify({'esg_score': esg_score})
+
+
+
+@app.route('/api/companies/discover', methods=['GET'])
+@token_required
+def discover_companies(current_user, role, user_id):
+    if role != 'investor':
+        return jsonify({"message": "Access restricted"}), 403
+
+    try:
+        conn = sqlite3.connect('assets/users.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, username, com_category FROM users WHERE role != 'investor' AND role != 'admin'")
+        companies = cursor.fetchall()
+        conn.close()
+
+        company_data = []
+        pred_conn = sqlite3.connect('assets/database.db')
+        pred_cursor = pred_conn.cursor()
+
+        for comp in companies:
+            c_id, c_username, c_category = comp
+            pred_cursor.execute("""
+                SELECT int_rate, default_rate, sus_score 
+                FROM predictions 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC LIMIT 1
+            """, (c_id,))
+            
+            latest = pred_cursor.fetchone()
+            score = 0
+            defs = 0.0
+            ints = 0.0
+            
+            if latest:
+                i_rate, d_rate, s_score = latest
+                i_rate = i_rate if i_rate is not None else 0
+                d_rate = d_rate if d_rate is not None else 0
+                s_score = s_score if s_score is not None else 0
+                
+                score = esgatescoref(i_rate, d_rate, s_score)
+                defs = d_rate
+                ints = i_rate
+
+            company_data.append({
+                "id": c_id,
+                "name": c_username.capitalize(),
+                "category": c_category if c_category else "Unspecified",
+                "esg_score": score,
+                "default_rate": f"{defs*100:.1f}%",
+                "int_rate": f"{ints*100:.2f}%",
+                "compliance": "CSRD Compliant" if score > 75 else "In Progress"
+            })
+
+        pred_conn.close()
+        return jsonify({"companies": company_data}), 200
+
+    except Exception as e:
+        print(f"Error in discover_companies: {e}")
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 
@@ -1124,6 +1342,7 @@ def predict_default(current_user, role,user_id):
     # user_id = user_row[0]
     # user_conn.close() 
 
+
     try:
         default_rate = predict_default_sme(data_def)
         if default_rate>=0.42:
@@ -1140,12 +1359,23 @@ def predict_default(current_user, role,user_id):
     if not ok:
         return jsonify({"error": f"Invalid model output: {reason}"}), 500
 
-    # Save using the new UPSERT logic
+    try:
+        u_conn = sqlite3.connect('assets/users.db')
+        u_cursor = u_conn.cursor()
+        u_cursor.execute("SELECT com_category FROM users WHERE id=?", (user_id,))
+        row = u_cursor.fetchone()
+        user_category = row[0] if row else "Unspecified"
+        u_conn.close()
+    except:
+        user_category = "Unspecified"
+
+
+    #New UPSERT
     try:
         save_prediction_metric(
             user_id,
-            # data_def.get('company_name', ''),
             current_user,
+            user_category,  # this was the issue the whole time
             'default_rate',
             float(default_rate)
         )
@@ -1159,20 +1389,10 @@ def predict_default(current_user, role,user_id):
 
 @app.route('/predict_int_rate', methods=['POST'])
 @token_required
-def predict_int_rate(current_user, role,user_id):
+def predict_int_rate(current_user, role, user_id):
     data = request.get_json()
     if not data:
         return jsonify({"error": "No JSON data received"}), 400
-
-    # conn = sqlite3.connect('assets/users.db')
-    # cursor = conn.cursor()
-    # cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
-    # user_row = cursor.fetchone()
-    # if user_row is None:
-    #     conn.close()
-    #     return jsonify({"error": "User not found"}), 400
-    # user_id = user_row[0]
-    # conn.close() # Close connection after getting user_id
 
     required = ['operation_years','revenue','office_own','team_exp','loan_amt','default_hist','cred_hist_len','repayment_status']
     for k in required:
@@ -1194,19 +1414,31 @@ def predict_int_rate(current_user, role,user_id):
     if not ok:
         return jsonify({"error": f"Invalid model output: {reason}"}), 500
 
-    # Implementing UPSERT
+
+    try:
+        u_conn = sqlite3.connect('assets/users.db')
+        u_cursor = u_conn.cursor()
+        u_cursor.execute("SELECT com_category FROM users WHERE id=?", (user_id,))
+        row = u_cursor.fetchone()
+        user_category = row[0] if row else "Unspecified"
+        u_conn.close()
+    except:
+        user_category = "Unspecified"
+
     try:
         save_prediction_metric(
             user_id,
-            #,data.get('company_name', ''),
             current_user,
+            user_category,   
             'int_rate',
             float(int_rate)
         )
     except Exception as e:
-        return jsonify({"error": f"Failed to save prediction: {str(e)}"}), 500
+        # Logs the error but doesn't crash the whole request if save fails
+        print(f"Error saving prediction: {e}")
+
     
-    int_rate+=0.05
+    int_rate += 0.05
 
     gc.collect()
     torch.cuda.empty_cache()
@@ -1261,15 +1493,15 @@ def sus_prompt(metrics, averages):
         - **Recommendations:** A bulleted list of 1-2 actionable recommendations for improvement.
 
     **Output Format:**
-    You MUST return your response as a single, valid JSON object. Do not include any text, notes, or explanations outside of the JSON structure.
+    You MUST return your response as a single, valid JSON object. Do not include any text, notes, or explanations outside of the JSON structure.
 
-    {{
-      "sus_score": <float>,
-      "summary": "<string>",
-      "strengths": ["<string>"],
-      "weaknesses": ["<string>"],
-      "recommendations": ["<string>"]
-    }}
+    {{
+     "sus_score": <float>,
+     "summary": "<string>",
+      "strengths": ["<string>"],
+      "weaknesses": ["<string>"],
+      "recommendations": ["<string>"]
+      }}
     """
     return prompt
 def parse_mistral_api_output(result):
@@ -1338,53 +1570,100 @@ def sustainability_prediction_endpoint(current_user, role,user_id):
         "max_tokens": 500
     }
 
+    # --- DUMMY RESPONSE DEFINITION ---
+
+    DUMMY_RESULT = {
+        "sus_score": 3.0, # A neutral, placeholder score
+        "summary": "AI Analysis is currently unavailable. The score below is a neutral placeholder. You may try again shortly.",
+        "strengths": [
+            "Resilience: Automatic fallback to placeholder analysis.",
+            "Core operational metrics were successfully processed."
+        ],
+        "weaknesses": [
+            "Tailored, data-driven analysis from the AI model could not be generated.",
+            "Benchmarking against sector averages is currently unavailable."
+        ],
+        "recommendations": [
+            "Review your submission metrics manually.",
+            "Please try the prediction again in a few minutes, as external services may be temporarily overloaded."
+        ]
+    }
+    # --- END DUMMY RESPONSE DEFINITION ---
+
+    parsed_result = None
+
     try:
         print("Calling Mistral API for sustainability...")
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=HEADERS, json=payload)
-        response.raise_for_status()
+        response.raise_for_status() # Raises an error
         print("Mistral API call successful.")
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: Mistral API request failed: {e}")
-        return jsonify({"error": f"Mistral API request failed: {str(e)}", "response_text": response.text if 'response' in locals() else "No response"}), 500
 
-    result = response.json()
-    print(f"Raw API Response: {result}")
+        result = response.json()
+        parsed_result = parse_mistral_api_output(result)
 
-    parsed_result = parse_mistral_api_output(result)
-    print(f"Parsed API Response: {parsed_result}")
+        # Check for error from AI response
+        if "error" in parsed_result or "sus_score" not in parsed_result:
+            print(f"WARNING: API call succeeded but parsing failed or AI returned an error. Using DUMMY data.")
+            print(f"Parsing/AI Error Details: {parsed_result.get('error', 'sus_score missing')}")
+            # This is going to save our demo
+            parsed_result = DUMMY_RESULT
+            print(f"WARNING: Using DUMMY summary: {DUMMY_RESULT['summary']}")
 
-    if "error" in parsed_result:
-        print(f"ERROR: Parsing failed or AI returned error: {parsed_result.get('error')}")
-    elif "sus_score" not in parsed_result:
-         print(f"ERROR: 'sus_score' key MISSING from parsed result. Keys are: {list(parsed_result.keys())}")
-    else:
-        print("'sus_score' key found. Attempting to save...")
+    except (requests.exceptions.RequestException, Exception) as e:
+        print(f"ERROR: Mistral API request failed or internal processing error: {e}")
+        # Plug in the dummy result
+        parsed_result = DUMMY_RESULT
+        print("DUMMY values plugged in due to API failure.")
+
+    # This block executes whether the result is real or dummy.
+    score_to_save = parsed_result.get('sus_score')
+    
+    # Ensure score_to_save is convertible to float
+    try:
+        score_to_save_float = float(score_to_save)
+    except (ValueError, TypeError):
+        print(f"WARNING: Score '{score_to_save}' is not a valid number. Skipping save.")
+        score_to_save_float = None
+
+    if score_to_save_float is not None:
         try:
-            # conn = sqlite3.connect('assets/users.db')
-            # cursor = conn.cursor()
-            # cursor.execute("SELECT id FROM users WHERE username = ?", (current_user,))
-            # user_row = cursor.fetchone()
-            # user_id = user_row[0] if user_row else None
-            # conn.close()
-
             if user_id:
-                print(f"Found user_id: {user_id}. Calling save_prediction_metric...")
+                # Get the category for this user
+                user_category = "Unspecified"
+                try:
+                    u_conn = sqlite3.connect('assets/users.db')
+                    u_cursor = u_conn.cursor()
+                    u_cursor.execute("SELECT com_category FROM users WHERE id=?", (user_id,))
+                    row = u_cursor.fetchone()
+                    user_category = row[0] if row else "Unspecified"
+                    u_conn.close()
+                except Exception as cat_e:
+                    print(f"Warning: Could not fetch user category for saving: {cat_e}")
+
+                print(f"Found user_id: {user_id}. Calling save_prediction_metric with score: {score_to_save_float}...")
                 save_prediction_metric(
                     user_id,
-                    # metrics_dict.get('company_name', ''),
                     current_user,
+                    user_category,
                     'sus_score',
-                    float(parsed_result['sus_score'])
+                    score_to_save_float
                 )
             else:
-                 print("ERROR: Could not find user_id after successful API call.")
+                print("ERROR: User ID is missing, cannot save sustainability score.")
 
         except Exception as e:
             print(f"ERROR during save process: Failed to save sus_score to database: {e}")
             traceback.print_exc()
+    else:
+        print("WARNING: Cannot save score because 'sus_score' was invalid or missing after processing.")
+
 
     print("--- EXITING /sustainability_prediction ---")
     return jsonify(parsed_result)
+
+
+
+
 
 
 
@@ -1486,6 +1765,8 @@ def predict_all_and_save(current_user, role,user_id):
 # model = "mistral-large-latest"
 # client = MistralClient(api_key=api_key)
 
+
+
 def get_mistral_tip():
     payload = {
             "model": "mistralai/mistral-small-3.2-24b-instruct:free",
@@ -1504,7 +1785,6 @@ def get_mistral_tip():
     result = response.json()
     
     try:
-        # 2. Parse the correct response structure
         return result.get("choices", [{}])[0].get("message", {}).get("content", "{}")
     except Exception as e:
         return {"error": f"Failed to parse tip: {str(e)}"}
@@ -1515,11 +1795,10 @@ def get_esg_tip():
     API endpoint that the frontend will call to get a new ESG tip.
     """
     try:
-        # You can pass parameters from the frontend if needed
+        # pass parameters from the frontend if needed
         # data = request.get_json() 
         # user_profile = data.get('profile') 
-        
-        # Get the tip from our AI function
+
         ai_tip = get_mistral_tip()
         
         return jsonify({'tip': ai_tip})
@@ -1530,36 +1809,59 @@ def get_esg_tip():
 # ------------------------ Last additions ------------------------
 @app.route('/get_gemini_news')
 def get_gemini_news():
-    sys_prompt = '''''
-    You are an output formatter. Your ONLY goal is to provide a single string output. 
-    The output MUST adhere to the following strict, hyphen-separated format:
-    [3 word news headline]*[very short summary of the article]*[link to the article]
+    sys_prompt = '''
+    You are a **GROUNDED NEWS SUMMARIZER AND OUTPUT FORMATTER**. 
+    Your primary task is to find a news article and format its details.
+    
+    1. **Search Focus**: You MUST use your search tool to find one recent, highly relevant news article ONLY about **EU ESG/CSRD rules affecting SMEs**.
+    2. **Grounding**: Once you have a source, you MUST generate the headline and summary **BASED SOLELY ON THE CONTENT OF THAT FOUND ARTICLE**.
+    3. **URL Priority**: You MUST copy the URL **DIRECTLY** from the search result. DO NOT modify or make up the URL.
+    4. **Output Format**: The output MUST adhere to the following strict, asterisk-separated format:
+       [3-5 word news headline]*[single, short summary (under 25 words)]*[REAL, full URL from the source]
 
     CRITICAL RULES:
-    1. Do not use any asteriks (*) in the news headline. Use different punctuation (like a colon or comma) if necessary.
-    2. Do not use any hyphens (*) in the very short summary.
-    3. The summary must be a single, short sentence.
-    4. Do not include any introductory text, markdown, or concluding remarks. The response must be ONLY the formatted string.
+    - The link MUST be a complete URL starting with 'https://' or 'http://'.
+    - Do not use any asterisks (*) in the headline or summary.
+    - Do not include any introductory text, markdown, or concluding remarks. The response must be ONLY the formatted string.
     '''
+    # --------------------------------------------------------------------------
+
     prompt = news_prompts[random.randrange(0,29)]
     gen_config = types.GenerateContentConfig(system_instruction=sys_prompt)
     response = client.models.generate_content(model=model_n,contents=[prompt],config=gen_config)
-    output = response.text # The response item itself gets discarded when .text is used on the response item itself
+    output = response.text
 
     if output:
         parts = output.split('*')
-        print('RAW OUTPUT',parts)
+        print('RAW OUTPUT', parts)
         parts = [p.strip() for p in parts if p.strip()]
-        if parts:
+        
+        if len(parts) >= 3:
             headline = parts[0]
             summary = parts[1]
             link = parts[2]
-            print('SUCCESSFULLY parsed the output')
-            return jsonify({'title':headline,'summary':summary.strip(),'link':link.strip()})
+            
+            # Defensive URL correction:
+            if not link.startswith(('http://', 'https://')):
+                link = 'https://' + link.lstrip('/')
+                print(f'WARNING: Prepending "https://" to partial URL: {link}')
+            
+            # Final domain validation check: (Using the imported 're')
+            if re.search(r'\.(com|org|net|co|gov|eu|int)/', link):
+                print('SUCCESSFULLY parsed the output')
+                return jsonify({'title':headline,'summary':summary.strip(),'link':link.strip()}), 200
+            else:
+                print(f'ERROR: URL failed final domain validation: {link}')
+                # Return an error for an invalid-looking URL
+                return jsonify({'error':'GEMINI NEWS ERROR: Invalid URL generated by model.'}), 500
+
         else:
-            print('\n\n\n\nERROR WHILE PARSING FROM GEMINI\n\n\n\n')
-            return jsonify({'error':'GEMINI NEWS ERROR WHILE SPLITTING'})
+            print(f'ERROR WHILE PARSING FROM GEMINI. Expected 3 parts, got {len(parts)}.\nRaw Parts: {parts}')
+            return jsonify({'error':'GEMINI NEWS ERROR: Output did not contain expected delimiters.'}), 500
     
+    return jsonify({'error':'GEMINI NEWS ERROR: No output received.'}), 500
+
+
 
 # -------------------------- Run Server --------------------------
 if __name__ == '__main__':

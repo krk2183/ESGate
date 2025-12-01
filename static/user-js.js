@@ -132,7 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // HOME PAGE NEWS
     async function set_news_elements() {
-        // V2 higher performance implementation
         const promise1 = fetch('/get_gemini_news',{});
         const promise2 = fetch('/get_gemini_news',{});
         const promise3 = fetch('/get_gemini_news',{});
@@ -533,6 +532,116 @@ document.addEventListener('DOMContentLoaded', function() {
             sustainabilityScoreChart = new Chart(susScoreCtx, createChartConfig('Sustainability Score (/10)', labels, susScoreData, 'rgba(76, 175, 80, 0.6)'));
         }
     }
+
+
+
+
+
+
+
+
+
+
+    // HERE
+
+
+
+
+    const cardsContainer = document.getElementById('company-cards-container');
+    
+    // Only run this if the container exists (i.e., on the investor page)
+    if (cardsContainer) {
+        fetchAndRenderCards();
+    }
+
+    async function fetchAndRenderCards() {
+        try {
+            // 1. Fetch data from the new backend route
+            const data = await makeApiCall('/api/companies/discover', 'GET');
+            
+            // 2. Clear the loading skeleton
+            cardsContainer.innerHTML = '';
+
+            if (data.companies && data.companies.length > 0) {
+                data.companies.forEach(company => {
+                    // Dynamic color logic
+                    let badgeColor = 'bg-gray-100 text-gray-800';
+                    let scoreColor = 'text-gray-700';
+                    
+                    if (company.esg_score >= 80) {
+                        scoreColor = 'text-green-600';
+                        badgeColor = 'bg-green-100 text-green-800';
+                    } else if (company.esg_score >= 50) {
+                        scoreColor = 'text-yellow-600';
+                        badgeColor = 'bg-yellow-100 text-yellow-800';
+                    } else {
+                        scoreColor = 'text-red-600';
+                        badgeColor = 'bg-red-100 text-red-800';
+                    }
+
+                    // Create the card HTML
+                    const cardHTML = `
+                        <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden flex flex-col h-full group">
+                            <div class="p-5 flex-grow">
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="px-2 py-1 rounded text-xs font-semibold uppercase tracking-wide bg-gray-100 text-gray-600">
+                                        ${company.category}
+                                    </span>
+                                    <div class="text-center">
+                                        <span class="block text-2xl font-bold ${scoreColor}">${company.esg_score}</span>
+                                        <span class="text-[10px] text-gray-400 uppercase tracking-wider">ESG Score</span>
+                                    </div>
+                                </div>
+                                
+                                <h3 class="text-lg font-bold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors">
+                                    ${company.name}
+                                </h3>
+                                
+                                <div class="mt-4 space-y-2">
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Default Risk</span>
+                                        <span class="font-medium font-mono text-gray-800">${company.default_rate}</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-500">Int. Rate</span>
+                                        <span class="font-medium font-mono text-gray-800">${company.int_rate}</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm items-center pt-2 border-t border-gray-50 mt-2">
+                                        <span class="text-gray-500">Status</span>
+                                        <span class="text-xs font-medium px-2 py-0.5 rounded-full ${company.compliance.includes('Compliant') ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'}">
+                                            ${company.compliance}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3 border-t border-gray-100">
+                                <button class="w-full text-center text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                                    View Analysis <i class="fas fa-arrow-right ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    cardsContainer.innerHTML += cardHTML;
+                });
+            } else {
+                cardsContainer.innerHTML = `
+                    <div class="col-span-full text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                        <p class="text-gray-500">No companies found matching criteria.</p>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error("Error fetching cards:", error);
+            cardsContainer.innerHTML = `
+                <div class="col-span-full text-center py-8">
+                    <p class="text-red-500">Failed to load opportunities.</p>
+                </div>
+            `;
+        }
+    }
+
+
+
 
     function createChartConfig(label, labels, data, color) {
         return {
