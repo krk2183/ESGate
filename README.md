@@ -54,4 +54,4 @@ KOBIA, the **Small and Medium Business Development Agency of the Republic of Aze
 
 ---
 
-**Developer:** Kenan Kerimzade (krk2183) | Questions? Ideas? Want to collaborate? Just reach out.
+**Developer:** Kanan Karimzada (krk2183) | Questions? Ideas? Want to collaborate? Feel free to reach out.
