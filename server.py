@@ -9,12 +9,14 @@ from google.genai import types
 # -------------------------- Flask Setup --------------------------
 app = Flask(__name__)
 CORS(app)
-app.config['SECRET_KEY'] = "YOUR_SECRET_KEY_HERE"  
-API = 'AIzaSyDKLbSO8AHomh4gtA-xiefy-yoVIblOXYw'
+app.config['SECRET_KEY'] = "ENTER_KEY_IF_PRESENT"  
+API = 'API_KEY'
+if API_KEY=='API-KEY':
+    print('Please enter your Gemini API key on Line 13!')
 client = genai.Client(api_key=API)
 model_n = 'gemini-2.5-flash'
 
-device = torch.device('cpu')  # CPU only 🙏🙏🥀
+device = torch.device('cpu')  
  
 news_prompts =    [
         "Find one recent, important news story about the EU's Corporate Sustainability Reporting Directive (CSRD) scope changes for SMEs.",
@@ -91,7 +93,6 @@ def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
         # Explicitly decode the password column if it's stored as bytes/blob
-        # Your schema uses TEXT, so this ensures it's bytes for bcrypt
         if col[0] == 'password' and isinstance(row[idx], str):
             d[col[0]] = row[idx].encode('utf-8')
         else:
@@ -158,7 +159,7 @@ def get_esg_data(user_id):
 
             if prev_int_rate is not None and prev_def_rate is not None and prev_sus_rate is not None:
                 previous_esg_score = esgatescoref(prev_int_rate,prev_def_rate,prev_sus_rate)
-                esg_improvement = current_esg_score - previous_esg_score # Pretty self explanotary
+                esg_improvement = current_esg_score - previous_esg_score # Calculating the improvement
         return {
             'esg_score': current_esg_score,
             'int_rate': int_rate,
@@ -279,8 +280,6 @@ def discover_page_user(current_user, role, user_id):
                           progress_percentage=progress_percentage,
                           has_data=esg_data['has_data'])
 
-# In server-app.py, around line 98, after get_esg_data:
-
 def get_user_details(user_id):
     """Fetches user's company category and username for personalized prompts."""
     conn = sqlite3.connect('assets/users.db')
@@ -373,7 +372,7 @@ def generate_roi_plan_endpoint(current_user, role, user_id):
             }
         )
         
-        # 5. Call Gemini
+        # Call Gemini
         response = client.models.generate_content(
             model=model_n, 
             contents=gemini_prompt,
@@ -438,12 +437,6 @@ def user_page(current_user,role,user_id):
         esg_data = get_esg_data(user_id)
         
         score = esg_data.get('esg_score')
-
-        # try:
-        #     # Only proceed if a score was found
-        #     esg_tier, esg_tier_short = get_esg_tier(score)
-        # except Exception as e:
-        #     # Handle the missing score case gracefully
         esg_tier = "Satisfactory "
         esg_tier_short = "IV"
         
@@ -656,8 +649,7 @@ def history(current_user, role,user_id):
         else:
             improvements['message'] = "Need at least two data points to calculate change."
             ai_analysis['message'] = "Need at least two data points for AI analysis."
-    # magic debugging solution
-    # IT TURNS OUT THAT THIS FUNCTION IS WORKING WE JUST CANT SAVE SHIT PROPERLY
+
     except sqlite3.Error as e:
         print(f"Database error fetching history: {e}")
         return jsonify({"error": f"Database error fetching history: {str(e)}"}), 500
@@ -669,7 +661,7 @@ def history(current_user, role,user_id):
     gc.collect()
 
     return jsonify({
-        "company_name": company_name, # this better solve it mf
+        "company_name": company_name, 
         "history": history_data,
         "improvement_metrics": improvements,
         "ai_analysis": ai_analysis
@@ -854,8 +846,10 @@ numerical_cols_to_scale_fit = ['annual_revenue',
                            ]
 
 # --- Mistral AI setup ---
-# MISTRAL_API_KEY = "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"
-MISTRAL_API_KEY = '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'
+MISTRAL_API_KEY = 'API-KEY'
+if MISTRAL_API_KEY=='API-KEY':
+    print('Please enter your API key on Line 847!')
+ 
 MISTRAL_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 HEADERS = {
     "Authorization": f"Bearer {MISTRAL_API_KEY}",
@@ -896,7 +890,7 @@ def save_prediction_metric(user_id, company_name, category, metric_name, metric_
             cursor.execute(query, (metric_value, record_id))
         else:
             print(f"Inserting new record...")
-            # Corrected INSERT statement with com_category
+            # INSERT added for compatibility
             query = f"INSERT INTO predictions (user_id, company_name, com_category, {metric_name}) VALUES (?, ?, ?, ?)"
             cursor.execute(query, (user_id, company_name_lower, category, metric_value))
 
@@ -940,7 +934,7 @@ def predict_company_metrics(model_to_use, scaler, derived_feature_info, feature_
         'loan_amount': loan_amount,
         'default_history': default_history,
         'credit_history_length': credit_history_length,
-        'repayment_status': repayment_status  # Keep this - it's needed for scaling
+        'repayment_status': repayment_status  # Needed for scaling
     }
     user_df = pd.DataFrame([feature_values])
 
@@ -1533,7 +1527,7 @@ def parse_mistral_api_output(result):
     
     except (json.JSONDecodeError, IndexError, KeyError) as e:
         print(f"Error parsing Mistral output: {e}")
-        print(f"Raw content received: {content_string}") # FUCK THIS
+        print(f"Raw content received: {content_string}") 
         return {"error": "Failed to parse AI response. The response might be malformed."}
     
 
@@ -1593,7 +1587,7 @@ def sustainability_prediction_endpoint(current_user, role,user_id):
     parsed_result = None
 
     try:
-        print("Calling Mistral API for sustainability...")
+        print("Calling Mistral  for sustainability...")
         response = requests.post("https://openrouter.ai/api/v1/chat/completions", headers=HEADERS, json=payload)
         response.raise_for_status() # Raises an error
         print("Mistral API call successful.")
